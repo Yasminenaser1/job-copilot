@@ -3,3 +3,4 @@ ollama
 fastapi
 uvicorn
 pydantic
+streamlit

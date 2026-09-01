@@ -6,6 +6,8 @@ a tailored cover letter, and a tracked application pipeline.
 
 Built with Python, Ollama (llama3.1:8b), ChromaDB, FastAPI, and Pydantic.
 
+![Job Copilot](screenshots/app.png)
+
 ## Why
 
 Job searching means reading dozens of postings and guessing "am I a fit?"

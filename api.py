@@ -60,3 +60,10 @@ def _safe_analyze(posting: str) -> MatchReport:
         return analyze(posting)
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+# ---- serve the frontend ----
+from fastapi.responses import FileResponse
+
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse("frontend/index.html")

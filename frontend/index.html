@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0C0A1A; --surface:#15122B; --surface-2:#1D1940; --line:#2A2454;
+  --ink:#EDEBFA; --muted:#9A93C4; --accent:#8B7CFF; --accent-soft:#C3B8FF;
+  --good:#5EE0A0; --warn:#FFC46B; --bad:#FF7A8A;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.55; min-height:100vh;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none;
+  background:
+    radial-gradient(700px 340px at 85% -10%, rgba(139,124,255,.16), transparent 60%),
+    radial-gradient(520px 300px at -10% 100%, rgba(139,124,255,.08), transparent 60%);
+}
+.app{position:relative; display:grid; grid-template-columns:220px 1fr; min-height:100vh}
+.rail{
+  border-right:1px solid var(--line); padding:28px 18px;
+  display:flex; flex-direction:column; gap:28px;
+}
+.wordmark{font-family:"Space Grotesk"; font-weight:700; font-size:20px; letter-spacing:-.02em}
+.wordmark span{color:var(--accent)}
+.tagline{color:var(--muted); font-size:12.5px; margin-top:6px}
+.nav{display:flex; flex-direction:column; gap:6px}
+.nav button{
+  all:unset; cursor:pointer; padding:10px 12px; border-radius:10px;
+  color:var(--muted); font-weight:500; font-size:14px;
+  transition:background .15s, color .15s;
+}
+.nav button:hover{color:var(--ink); background:var(--surface)}
+.nav button.active{color:var(--ink); background:var(--surface-2); box-shadow:inset 2px 0 0 var(--accent)}
+.nav button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.rail .status{margin-top:auto; font-size:12.5px; color:var(--muted)}
+.dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:7px; vertical-align:1px}
+.dot.on{background:var(--good)}
+main{padding:36px 44px; max-width:980px; width:100%}
+h1{font-family:"Space Grotesk"; font-weight:600; font-size:26px; letter-spacing:-.02em; margin-bottom:4px}
+.sub{color:var(--muted); margin-bottom:26px; max-width:56ch}
+.view{display:none}
+.view.active{display:block; animation:enter .25s ease}
+@keyframes enter{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .view.active{animation:none} }
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px 2px}
+input[type=text], textarea, select{
+  width:100%; background:var(--surface); color:var(--ink);
+  border:1px solid var(--line); border-radius:10px; padding:11px 13px;
+  font:inherit; transition:border-color .15s;
+}
+textarea{min-height:190px; resize:vertical; line-height:1.5}
+input:focus, textarea:focus, select:focus{outline:none; border-color:var(--accent)}
+.field{margin-bottom:16px}
+.actions{display:flex; align-items:center; gap:14px; margin-top:6px}
+.btn{
+  font:inherit; font-weight:600; cursor:pointer; border:none; border-radius:10px;
+  padding:11px 22px; background:var(--accent); color:#100D24;
+  transition:transform .12s, filter .15s;
+}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.55; cursor:wait}
+.btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--line)}
+.hint{color:var(--muted); font-size:13px}
+.error{
+  display:none; margin-top:14px; padding:12px 14px; border-radius:10px;
+  background:rgba(255,122,138,.09); border:1px solid rgba(255,122,138,.35); color:#FFB9C2; font-size:14px;
+}
+.report{display:none; margin-top:30px; border-top:1px solid var(--line); padding-top:26px}
+.report-grid{display:grid; grid-template-columns:200px 1fr; gap:30px; align-items:start}
+.gauge-wrap{text-align:center}
+.gauge{width:170px; height:170px}
+.gauge .track{stroke:var(--surface-2)}
+.gauge .fill{stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+.gauge text{fill:var(--ink); font-family:"Space Grotesk"; font-weight:700}
+.gauge .pct{font-size:34px}
+.gauge-label{color:var(--muted); font-size:13px; margin-top:8px}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+.skill-block h3{font-family:"Space Grotesk"; font-size:15px; font-weight:600; margin-bottom:10px}
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.chip{
+  font-size:13px; padding:5px 11px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--line);
+}
+.chip.have{border-color:rgba(94,224,160,.4); color:var(--good)}
+.chip.miss{border-color:rgba(255,196,107,.4); color:var(--warn)}
+.verdict{
+  margin-top:20px; padding:14px 16px; border-radius:var(--radius);
+  background:var(--surface); border-left:3px solid var(--accent); color:var(--accent-soft);
+}
+.emphasize{margin-top:14px; color:var(--muted); font-size:14px}
+.emphasize b{color:var(--ink); font-weight:600}
+.logged{margin-top:12px; font-size:13.5px; color:var(--good); display:none}
+.letter-out{display:none; margin-top:26px}
+.letter-out textarea{min-height:320px; background:var(--surface-2)}
+.copy-ok{color:var(--good); font-size:13px; display:none}
+table{width:100%; border-collapse:collapse; margin-top:8px}
+th{
+  text-align:left; font-size:12.5px; font-weight:500; color:var(--muted);
+  padding:10px 12px; border-bottom:1px solid var(--line);
+}
+td{padding:12px; border-bottom:1px solid var(--line); font-size:14px; vertical-align:middle}
+tr:hover td{background:rgba(139,124,255,.04)}
+.score-pill{
+  display:inline-block; min-width:46px; text-align:center; font-weight:600;
+  font-family:"Space Grotesk"; padding:3px 10px; border-radius:999px; font-size:13.5px;
+}
+.s-high{background:rgba(94,224,160,.12); color:var(--good)}
+.s-mid{background:rgba(255,196,107,.12); color:var(--warn)}
+.s-low{background:rgba(255,122,138,.12); color:var(--bad)}
+td select{width:auto; padding:6px 10px; font-size:13px}
+.empty{
+  margin-top:20px; padding:34px; text-align:center; color:var(--muted);
+  border:1px dashed var(--line); border-radius:var(--radius);
+}
+.spinner{
+  display:none; width:16px; height:16px; border-radius:50%;
+  border:2px solid var(--line); border-top-color:var(--accent);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .rail{flex-direction:row; align-items:center; border-right:none; border-bottom:1px solid var(--line); padding:16px 18px}
+  .rail .brand{margin-right:auto}
+  .tagline,.rail .status{display:none}
+  .nav{flex-direction:row}
+  main{padding:24px 18px}
+  .grid-2,.cols,.report-grid{grid-template-columns:1fr}
+  .gauge-wrap{margin:0 auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="wordmark">Job<span>Copilot</span></div>
+      <div class="tagline">Local AI job-search automation</div>
+    </div>
+    <nav class="nav" aria-label="Sections">
+      <button class="active" data-view="match">Match a posting</button>
+      <button data-view="letter">Cover letter</button>
+      <button data-view="pipeline">Pipeline</button>
+    </nav>
+    <div class="status"><span class="dot" id="apiDot"></span><span id="apiText">Checking API…</span></div>
+  </aside>
+
+  <main>
+    <section class="view active" id="view-match">
+      <h1>Match a posting</h1>
+      <p class="sub">Paste a job description. It's scored against your indexed resume with an honest rubric, and logged to your pipeline when a company and role are set.</p>
+
+      <div class="grid-2 field">
+        <div><label for="company">Company</label><input type="text" id="company" placeholder="Acme AI"></div>
+        <div><label for="role">Role</label><input type="text" id="role" placeholder="AI Automation Engineer"></div>
+      </div>
+      <div class="field">
+        <label for="posting">Job posting</label>
+        <textarea id="posting" placeholder="Paste the full description — title, requirements, responsibilities…"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn" id="analyzeBtn">Analyze posting</button>
+        <div class="spinner" id="matchSpin"></div>
+        <span class="hint" id="matchHint">Scoring takes ~15 seconds on the local model.</span>
+      </div>
+      <div class="error" id="matchError"></div>
+
+      <div class="report" id="report">
+        <div class="report-grid">
+          <div class="gauge-wrap">
+            <svg class="gauge" viewBox="0 0 120 120" role="img" aria-label="Match score">
+              <circle class="track" cx="60" cy="60" r="52" fill="none" stroke-width="10"/>
+              <circle class="fill" id="gaugeFill" cx="60" cy="60" r="52" fill="none" stroke-width="10"
+                      stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 60 60)"/>
+              <text class="pct" x="60" y="66" text-anchor="middle" id="gaugePct">0</text>
+              <text x="60" y="84" text-anchor="middle" font-size="11" fill="#9A93C4">match</text>
+            </svg>
+            <div class="gauge-label" id="gaugeVerdictShort"></div>
+          </div>
+          <div>
+            <div class="cols">
+              <div class="skill-block">
+                <h3>You already have</h3>
+                <div class="chips" id="haveChips"></div>
+              </div>
+              <div class="skill-block">
+                <h3>The posting wants</h3>
+                <div class="chips" id="missChips"></div>
+              </div>
+            </div>
+            <div class="verdict" id="verdict"></div>
+            <div class="emphasize" id="emphasize"></div>
+            <div class="logged" id="logged"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-letter">
+      <h1>Cover letter</h1>
+      <p class="sub">Drafted only from experience that actually appears in your resume — then you edit. Never send a first draft unread.</p>
+      <div class="field">
+        <label for="letterCompany">Company</label>
+        <input type="text" id="letterCompany" placeholder="Acme AI">
+      </div>
+      <div class="field">
+        <label for="letterPosting">Job posting</label>
+        <textarea id="letterPosting" placeholder="Paste the description the letter should respond to…"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn" id="letterBtn">Draft letter</button>
+        <div class="spinner" id="letterSpin"></div>
+      </div>
+      <div class="error" id="letterError"></div>
+      <div class="letter-out" id="letterOut">
+        <div class="field">
+          <label for="letterText">Draft — edit before sending</label>
+          <textarea id="letterText"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="copyBtn">Copy to clipboard</button>
+          <span class="copy-ok" id="copyOk">Copied.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-pipeline">
+      <h1>Pipeline</h1>
+      <p class="sub">Every posting you've analyzed, sorted by fit. Update a status as you apply, interview, and hear back.</p>
+      <div id="pipelineBody"></div>
+    </section>
+  </main>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const API = "";
+
+document.querySelectorAll(".nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    btn.classList.add("active");
+    $("view-" + btn.dataset.view).classList.add("active");
+    if (btn.dataset.view === "pipeline") loadPipeline();
+  });
+});
+
+(async () => {
+  try {
+    const r = await fetch(API + "/health");
+    if (r.ok) { $("apiDot").classList.add("on"); $("apiText").textContent = "API connected"; }
+    else throw new Error();
+  } catch { $("apiText").textContent = "API offline — start uvicorn"; }
+})();
+
+$("analyzeBtn").addEventListener("click", async () => {
+  const posting = $("posting").value.trim();
+  const company = $("company").value.trim();
+  const role = $("role").value.trim();
+  hide("matchError"); $("report").style.display = "none"; $("logged").style.display = "none";
+  if (posting.length < 50) return showError("matchError", "Paste a full job description first (at least a few sentences).");
+
+  busy("analyzeBtn", "matchSpin", true);
+  try {
+    let report, appId = null;
+    if (company && role) {
+      const r = await postJSON("/analyze", { company, role, posting });
+      report = r.report; appId = r.application_id;
+    } else {
+      report = await postJSON("/match", { posting });
+    }
+    renderReport(report, appId, company);
+  } catch (e) {
+    showError("matchError", e.message);
+  } finally {
+    busy("analyzeBtn", "matchSpin", false);
+  }
+});
+
+function renderReport(rep, appId, company) {
+  $("report").style.display = "block";
+  const score = rep.match_score;
+  const C = 326.7;
+  const fill = $("gaugeFill");
+  const color = score >= 70 ? "var(--good)" : score >= 45 ? "var(--warn)" : "var(--bad)";
+  fill.style.stroke = color;
+  requestAnimationFrame(() => { fill.style.strokeDashoffset = C - (C * score / 100); });
+  animateNumber($("gaugePct"), score);
+  $("gaugeVerdictShort").textContent = score >= 70 ? "Strong fit" : score >= 45 ? "Partial fit" : "Weak fit";
+  $("haveChips").innerHTML = chips(rep.matching_skills, "have") || emptyChip();
+  $("missChips").innerHTML = chips(rep.missing_keywords, "miss") || emptyChip();
+  $("verdict").textContent = rep.one_line_verdict;
+  $("emphasize").innerHTML = rep.projects_to_emphasize?.length
+    ? "Lead with: <b>" + rep.projects_to_emphasize.map(esc).join("</b>, <b>") + "</b>" : "";
+  if (appId) { $("logged").style.display = "block"; $("logged").textContent = "Logged to pipeline as #" + appId + (company ? " (" + company + ")" : ""); }
+  $("report").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function chips(list, cls) { return (list || []).map(s => `<span class="chip ${cls}">${esc(s)}</span>`).join(""); }
+function emptyChip(){ return '<span class="chip">none detected</span>'; }
+function animateNumber(el, target) {
+  const t0 = performance.now(), dur = 900;
+  const step = (t) => { const p = Math.min(1, (t - t0) / dur);
+    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+$("letterBtn").addEventListener("click", async () => {
+  const posting = $("letterPosting").value.trim();
+  const company = $("letterCompany").value.trim() || "the company";
+  hide("letterError"); $("letterOut").style.display = "none";
+  if (posting.length < 50) return showError("letterError", "Paste the job description the letter should respond to.");
+  busy("letterBtn", "letterSpin", true);
+  try {
+    const r = await postJSON("/cover-letter", { company, posting });
+    $("letterText").value = r.cover_letter;
+    $("letterOut").style.display = "block";
+  } catch (e) { showError("letterError", e.message); }
+  finally { busy("letterBtn", "letterSpin", false); }
+});
+$("copyBtn").addEventListener("click", async () => {
+  await navigator.clipboard.writeText($("letterText").value);
+  $("copyOk").style.display = "inline"; setTimeout(() => $("copyOk").style.display = "none", 1800);
+});
+
+async function loadPipeline() {
+  const body = $("pipelineBody");
+  body.innerHTML = '<p class="hint">Loading…</p>';
+  try {
+    const apps = await (await fetch(API + "/applications")).json();
+    if (!apps.length) {
+      body.innerHTML = '<div class="empty">Nothing here yet. Analyze a posting with a company and role filled in, and it lands in your pipeline.</div>';
+      return;
+    }
+    const statuses = ["analyzed", "applied", "interview", "offer", "rejected"];
+    body.innerHTML = `<table>
+      <thead><tr><th>#</th><th>Company</th><th>Role</th><th>Score</th><th>Missing</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>` + apps.map(a => `
+        <tr>
+          <td>${a.id}</td>
+          <td>${esc(a.company)}</td>
+          <td>${esc(a.role)}</td>
+          <td><span class="score-pill ${a.match_score >= 70 ? "s-high" : a.match_score >= 45 ? "s-mid" : "s-low"}">${a.match_score}</span></td>
+          <td class="hint">${esc(a.missing_keywords || "")}</td>
+          <td><select data-id="${a.id}">${statuses.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+          <td class="hint">${esc(a.analyzed_on || "")}</td>
+        </tr>`).join("") + "</tbody></table>";
+    body.querySelectorAll("select").forEach(sel => sel.addEventListener("change", async () => {
+      await fetch(API + "/applications/" + sel.dataset.id, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: sel.value })
+      });
+    }));
+  } catch { body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>'; }
+}
+
+async function postJSON(path, data) {
+  const r = await fetch(API + path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
+  });
+  if (!r.ok) {
+    let msg = "Request failed (" + r.status + ")";
+    try { msg = (await r.json()).detail || msg; } catch {}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+function busy(btnId, spinId, on) { $(btnId).disabled = on; $(spinId).style.display = on ? "block" : "none"; }
+function showError(id, msg) { const el = $(id); el.textContent = msg; el.style.display = "block"; }
+function hide(id) { $(id).style.display = "none"; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+</script>
+</body>
+</html>
