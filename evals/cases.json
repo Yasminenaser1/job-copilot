@@ -25,7 +25,7 @@
     "posting": "Attorney at Smith & Jones. Requires a J.D. and an active bar license. Duties include advising clients and representing them.",
     "min_score": 0,
     "max_score": 40,
-    "must_match": ["advising clients"]
+    "must_match": ["representing client"]
   }
 ]
 
