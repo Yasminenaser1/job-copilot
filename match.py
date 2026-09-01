@@ -74,3 +74,27 @@ def print_report(report: MatchReport, job_name: str):
 if __name__ == "__main__":
     job_file = Path(sys.argv[1] if len(sys.argv) > 1 else "jobs/example-role.md")
     print_report(analyze(job_file.read_text()), job_file.stem)
+
+
+# ---- input validation: is this actually a job posting? ----
+class PostingCheck(BaseModel):
+    is_job_posting: bool
+    reason: str
+
+def validate_posting(posting: str) -> PostingCheck:
+    """Cheap gate before the expensive analysis: one yes/no model call."""
+    response = ollama.chat(
+        model=CHAT_MODEL,
+        messages=[{"role": "user", "content": f"""Is the following text an actual job posting
+(a role a company is hiring for, with requirements or duties)?
+Text that is NOT a job posting: project descriptions, README files, articles,
+resumes, random text, placeholder text.
+
+TEXT:
+{posting[:2000]}
+
+Respond with ONLY a JSON object: {{"is_job_posting": true or false, "reason": "one short sentence"}}"""}],
+        format="json",
+        options={"temperature": 0},
+    )
+    return PostingCheck.model_validate_json(response["message"]["content"])

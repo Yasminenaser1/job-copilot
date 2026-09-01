@@ -46,3 +46,23 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---- validator evals: inputs that must be accepted/rejected ----
+from match import validate_posting
+
+VALIDATOR_CASES = [
+    ("readme_text", "Job Copilot is a full-stack AI application with RAG matching, AI cover letters, and an application tracker built with FastAPI and Ollama.", False),
+    ("random_text", "The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor.", False),
+    ("real_posting", "Software Engineer at DataCorp. Requirements: 2+ years Python, SQL, REST API experience. Responsibilities include building data pipelines and maintaining internal services.", True),
+]
+
+def run_validator_cases() -> tuple[int, int]:
+    passed = 0
+    print("\n🛡️  Validator cases...")
+    for name, text, expected in VALIDATOR_CASES:
+        result = validate_posting(text)
+        ok = result.is_job_posting == expected
+        print(f"{'✅ PASS' if ok else '❌ FAIL'}  {name}" + ("" if ok else f"\n       ↳ expected {expected}, got {result.is_job_posting} ({result.reason})"))
+        passed += ok
+    return passed, len(VALIDATOR_CASES)

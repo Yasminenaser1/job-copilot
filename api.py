@@ -1,7 +1,7 @@
 """Job Copilot API - match, cover letters, and application tracking."""
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from match import analyze, MatchReport
+from match import analyze, MatchReport, validate_posting
 from cover_letter import write_cover_letter
 from tracker import log_application, update_status, list_applications
 
@@ -56,6 +56,9 @@ def set_status(app_id: int, update: StatusUpdate):
 def _safe_analyze(posting: str) -> MatchReport:
     if len(posting.strip()) < 50:
         raise HTTPException(status_code=400, detail="Posting too short to analyze")
+    check = validate_posting(posting)
+    if not check.is_job_posting:
+        raise HTTPException(status_code=400, detail=f"That doesn't look like a job posting: {check.reason}")
     try:
         return analyze(posting)
     except RuntimeError as e:
