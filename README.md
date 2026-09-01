@@ -69,7 +69,8 @@ python match.py jobs/example-role.md
 
 # 3. Or run the API
 uvicorn api:app --reload
-# open http://127.0.0.1:8000/docs
+# open http://127.0.0.1:8000       <- web UI
+# open http://127.0.0.1:8000/docs  <- API docs
 ```
 
 ## Run the evals
