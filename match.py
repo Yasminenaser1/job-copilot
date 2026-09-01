@@ -27,7 +27,12 @@ def retrieve_profile(posting: str) -> str:
 
 def build_prompt(profile: str, posting: str) -> str:
     return f"""You are a strict, honest career coach. Compare the CANDIDATE PROFILE to the JOB POSTING.
-Grade harshly: a candidate missing core requirements should score below 50.
+Use this rubric for match_score:
+- 80-100: candidate has the core required skills and relevant hands-on projects or experience
+- 60-79: has most core skills, missing some secondary ones
+- 40-59: has some overlapping skills but lacks key requirements
+- 0-39: different field, or missing most core requirements
+Do not penalize for years of experience if the posting welcomes early-career candidates.
 
 CANDIDATE PROFILE:
 {profile}
