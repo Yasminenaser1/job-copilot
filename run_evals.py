@@ -44,8 +44,22 @@ def main():
 
     print(f"\n📊 {passed}/{len(cases)} passed ({100 * passed // len(cases)}%)")
 
-if __name__ == "__main__":
-    main()
+def run_all():
+    import json as _json
+    cases = _json.load(open("evals/cases.json"))
+    passed = 0
+    print(f"🧪 Running {len(cases)} eval cases...\n")
+    for case in cases:
+        ok, failures = run_case(case)
+        print(f"{'✅ PASS' if ok else '❌ FAIL'}  {case['name']}")
+        for f in failures:
+            print(f"       ↳ {f}")
+        passed += ok
+    v_passed, v_total = run_validator_cases()
+    total, total_passed = len(cases) + v_total, passed + v_passed
+    print(f"\n📊 {total_passed}/{total} passed ({100 * total_passed // total}%)")
+
+
 
 
 # ---- validator evals: inputs that must be accepted/rejected ----
@@ -66,3 +80,7 @@ def run_validator_cases() -> tuple[int, int]:
         print(f"{'✅ PASS' if ok else '❌ FAIL'}  {name}" + ("" if ok else f"\n       ↳ expected {expected}, got {result.is_job_posting} ({result.reason})"))
         passed += ok
     return passed, len(VALIDATOR_CASES)
+
+
+if __name__ == "__main__":
+    run_all()
