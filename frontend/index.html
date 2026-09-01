@@ -14,8 +14,23 @@
   --good:#5EE0A0; --warn:#FFC46B; --bad:#FF7A8A;
   --radius:14px;
 }
+[data-theme="light"]{
+  --bg:#F7F6FC; --surface:#FFFFFF; --surface-2:#EDEAFB; --line:#DDD8F0;
+  --ink:#221E3F; --muted:#6C668F; --accent:#6A58E8; --accent-soft:#4A3FBF;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html{color-scheme:dark}
+html[data-theme="light"]{color-scheme:light}
+.theme-toggle{display:flex; gap:4px; background:var(--surface); border:1px solid var(--line);
+  border-radius:10px; padding:4px; width:fit-content}
+.theme-toggle button{all:unset; cursor:pointer; font-size:12px; padding:5px 10px;
+  border-radius:7px; color:var(--muted)}
+.theme-toggle button.active{background:var(--accent); color:#fff}
+[data-theme="light"] body::before{
+  background:
+    radial-gradient(700px 340px at 85% -10%, rgba(106,88,232,.10), transparent 60%),
+    radial-gradient(520px 300px at -10% 100%, rgba(106,88,232,.05), transparent 60%);
+}
 body{
   background:var(--bg); color:var(--ink);
   font-family:Inter,system-ui,-apple-system,sans-serif;
@@ -156,7 +171,14 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <button data-view="letter">Cover letter</button>
       <button data-view="pipeline">Pipeline</button>
     </nav>
-    <div class="status"><span class="dot" id="apiDot"></span><span id="apiText">Checking API…</span></div>
+    <div class="status">
+      <div class="theme-toggle" id="themeToggle" style="margin-bottom:12px">
+        <button data-theme-pick="light">Light</button>
+        <button data-theme-pick="system" class="active">System</button>
+        <button data-theme-pick="dark">Dark</button>
+      </div>
+      <span class="dot" id="apiDot"></span><span id="apiText">Checking API…</span>
+    </div>
   </aside>
 
   <main>
@@ -248,6 +270,24 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 <script>
 const $ = (id) => document.getElementById(id);
 const API = "";
+
+/* ---------- theme ---------- */
+const mq = window.matchMedia("(prefers-color-scheme: light)");
+function applyTheme(mode) {
+  const light = mode === "light" || (mode === "system" && mq.matches);
+  document.documentElement.toggleAttribute("data-theme", light);
+  if (light) document.documentElement.setAttribute("data-theme", "light");
+  else document.documentElement.removeAttribute("data-theme");
+  document.querySelectorAll("#themeToggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.themePick === mode));
+  localStorage.setItem("jc-theme", mode);
+}
+document.querySelectorAll("#themeToggle button").forEach(b =>
+  b.addEventListener("click", () => applyTheme(b.dataset.themePick)));
+mq.addEventListener("change", () => {
+  if (localStorage.getItem("jc-theme") === "system") applyTheme("system");
+});
+applyTheme(localStorage.getItem("jc-theme") || "system");
 
 document.querySelectorAll(".nav button").forEach(btn => {
   btn.addEventListener("click", () => {
