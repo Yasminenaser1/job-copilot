@@ -1,11 +1,14 @@
-# Resume
+# Yasmine Naser - Resume
 
 ## Skills
-Python, SQL, ...
+(your real skills list)
 
 ## Experience
-(paste your real experience here)
+(your internship: title, company, dates, and your bullet points)
+(any earlier jobs)
 
 ## Projects
-my-ai: local AI assistant with persistent memory (Python, Ollama)
-model-router: ...
+(my-ai, model-router, job-copilot - a line or two each)
+
+## Education
+(school, program, dates)
