@@ -1,0 +1,7 @@
+venv/
+db/
+tracker.db
+profile/
+jobs/
+__pycache__/
+.git/
