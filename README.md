@@ -16,6 +16,20 @@ local tracker.
 
 ## How it works
 
+    job posting --> embed (nomic-embed-text)
+                        |
+                        v
+                ChromaDB similarity search --> top resume chunks
+                        |
+                        v
+          llama3.1:8b + scoring rubric (temperature=0)
+                        |
+                        v
+          JSON validated against Pydantic schema (with retries)
+                        |
+                        v
+       match report --> SQLite tracker --> FastAPI endpoints
+
 ## Features
 
 - **RAG matching** — resume is chunked, embedded, and stored in ChromaDB;
