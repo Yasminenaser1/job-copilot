@@ -11,7 +11,7 @@
     "posting": "Senior Registered Nurse, ICU. Requires active RN license, BSN degree, 5+ years critical care experience, ACLS certification, and experience with ventilator management and patient charting systems.",
     "min_score": 0,
     "max_score": 40,
-    "must_match": []
+    "must_match": ["BSN degree"]
   },
   {
     "name": "partial_fit_data_analyst",
@@ -19,5 +19,13 @@
     "min_score": 30,
     "max_score": 80,
     "must_match": ["SQL"]
+  },
+  {
+    "name": "wrong_fit_lawyer",
+    "posting": "Attorney at Smith & Jones. Requires a J.D. and an active bar license. Duties include advising clients and representing them.",
+    "min_score": 0,
+    "max_score": 40,
+    "must_match": ["advising clients"]
   }
 ]
+
