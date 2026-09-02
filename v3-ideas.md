@@ -10,3 +10,6 @@ If v3 ever gets signed, it gets its own contract with its own finish line.
 
 ## Ideas:
 -
+- More job feeds beyond RemoteOK (WeWorkRemotely, HN Who's Hiring, etc.) - more real openings to judge
+- "Top Picks" daily digest view - the 3 best new matches surfaced with letters attached, instead of a table
+- Smarter thresholds - only surface 70%+, auto-bury the rest
