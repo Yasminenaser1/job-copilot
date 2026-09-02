@@ -36,7 +36,9 @@ def list_applications() -> list[dict]:
     init_db()
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
-        rows = conn.execute("SELECT * FROM applications ORDER BY match_score DESC").fetchall()
+        # id breaks score ties so row order is stable run to run - the Insights agent
+        # feeds these rows straight into its prompt, and a shuffled corpus is a changed prompt
+        rows = conn.execute("SELECT * FROM applications ORDER BY match_score DESC, id").fetchall()
         return [dict(r) for r in rows]
 
 if __name__ == "__main__":
