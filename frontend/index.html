@@ -137,6 +137,12 @@ tr:hover td{background:rgba(139,124,255,.04)}
 .s-mid{background:rgba(255,196,107,.12); color:var(--warn)}
 .s-low{background:rgba(255,122,138,.12); color:var(--bad)}
 td select{width:auto; padding:6px 10px; font-size:13px}
+.mini-btn{
+  font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+  border:1px solid var(--accent); border-radius:8px; padding:5px 10px;
+  background:transparent; color:var(--accent); transition:background .15s, color .15s;
+}
+.mini-btn:hover{background:var(--accent); color:#fff}
 .empty{
   margin-top:20px; padding:34px; text-align:center; color:var(--muted);
   border:1px dashed var(--line); border-radius:var(--radius);
@@ -263,6 +269,11 @@ td select{width:auto; padding:6px 10px; font-size:13px}
     <section class="view" id="view-pipeline">
       <h1>Pipeline</h1>
       <p class="sub">Every posting you've analyzed, sorted by fit. Update a status as you apply, interview, and hear back.</p>
+      <div class="theme-toggle" id="pipeFilter" style="margin-bottom:14px">
+        <button data-pf="all" class="active">All</button>
+        <button data-pf="scouted">Scouted</button>
+        <button data-pf="applied">Applied</button>
+      </div>
       <div id="pipelineBody"></div>
     </section>
   </main>
@@ -377,18 +388,28 @@ $("copyBtn").addEventListener("click", async () => {
   $("copyOk").style.display = "inline"; setTimeout(() => $("copyOk").style.display = "none", 1800);
 });
 
+let pipeFilterMode = "all";
+document.querySelectorAll("#pipeFilter button").forEach(b =>
+  b.addEventListener("click", () => {
+    pipeFilterMode = b.dataset.pf;
+    document.querySelectorAll("#pipeFilter button").forEach(x =>
+      x.classList.toggle("active", x === b));
+    loadPipeline();
+  }));
+
 async function loadPipeline() {
   const body = $("pipelineBody");
   body.innerHTML = '<p class="hint">Loading…</p>';
   try {
-    const apps = await (await fetch(API + "/applications")).json();
+    let apps = await (await fetch(API + "/applications")).json();
+    if (pipeFilterMode !== "all") apps = apps.filter(a => a.status === pipeFilterMode);
     if (!apps.length) {
       body.innerHTML = '<div class="empty">Nothing here yet. Analyze a posting with a company and role filled in, and it lands in your pipeline.</div>';
       return;
     }
     const statuses = ["analyzed", "applied", "interview", "offer", "rejected"];
     body.innerHTML = `<table>
-      <thead><tr><th>#</th><th>Company</th><th>Role</th><th>Score</th><th>Missing</th><th>Status</th><th>Date</th></tr></thead>
+      <thead><tr><th>#</th><th>Company</th><th>Role</th><th>Score</th><th>Missing</th><th>Status</th><th>Date</th><th></th></tr></thead>
       <tbody>` + apps.map(a => `
         <tr>
           <td>${a.id}</td>
@@ -398,7 +419,16 @@ async function loadPipeline() {
           <td class="hint">${esc(a.missing_keywords || "")}</td>
           <td><select data-id="${a.id}">${statuses.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
           <td class="hint">${esc(a.analyzed_on || "")}</td>
+          <td>${a.status === "analyzed" ? `<button class="mini-btn" data-apply="${a.id}">Mark applied</button>` : ""}</td>
         </tr>`).join("") + "</tbody></table>";
+    body.querySelectorAll("[data-apply]").forEach(btn => btn.addEventListener("click", async () => {
+      btn.disabled = true; btn.textContent = "...";
+      await fetch(API + "/applications/" + btn.dataset.apply, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "applied" })
+      });
+      loadPipeline();
+    }));
     body.querySelectorAll("select").forEach(sel => sel.addEventListener("change", async () => {
       await fetch(API + "/applications/" + sel.dataset.id, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
