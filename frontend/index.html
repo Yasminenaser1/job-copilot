@@ -62,6 +62,7 @@ body::before{
 .rail .status{margin-top:auto; font-size:12.5px; color:var(--muted)}
 .dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:7px; vertical-align:1px}
 .dot.on{background:var(--good)}
+.dot.stale{background:var(--warn)}
 main{padding:36px 44px; max-width:980px; width:100%}
 h1{font-family:"Space Grotesk"; font-weight:600; font-size:26px; letter-spacing:-.02em; margin-bottom:4px}
 .sub{color:var(--muted); margin-bottom:26px; max-width:56ch}
@@ -362,6 +363,10 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 <script>
 const $ = (id) => document.getElementById(id);
 const API = "";
+// Bumped with APP_VERSION in api.py. A mismatch means the page and the server were
+// built from different code - usually uvicorn started before the last edit, without
+// --reload - which otherwise shows up as an unexplained 404 on a route you just added.
+const UI_VERSION = "0.5.0";
 
 /* ---------- theme ---------- */
 const mq = window.matchMedia("(prefers-color-scheme: light)");
@@ -395,8 +400,19 @@ document.querySelectorAll(".nav button").forEach(btn => {
 (async () => {
   try {
     const r = await fetch(API + "/health");
-    if (r.ok) { $("apiDot").classList.add("on"); $("apiText").textContent = "API connected"; }
-    else throw new Error();
+    if (!r.ok) throw new Error();
+    const health = await r.json();
+    if (health.version !== UI_VERSION) {
+      // No version field at all means a server built before this check existed,
+      // which is the stalest case there is - flag it rather than let it pass.
+      $("apiDot").classList.add("stale");
+      $("apiText").textContent = health.version
+        ? `API is v${health.version}, this page is v${UI_VERSION} — restart uvicorn`
+        : `API predates this page (v${UI_VERSION}) — restart uvicorn`;
+      return;
+    }
+    $("apiDot").classList.add("on");
+    $("apiText").textContent = "API connected";
   } catch { $("apiText").textContent = "API offline — start uvicorn"; }
 })();
 
@@ -483,7 +499,7 @@ async function loadPipeline() {
   const body = $("pipelineBody");
   body.innerHTML = '<p class="hint">Loading…</p>';
   try {
-    let apps = await (await fetch(API + "/applications")).json();
+    let apps = await getJSON("/applications");
     if (pipeFilterMode !== "all") apps = apps.filter(a => a.status === pipeFilterMode);
     if (!apps.length) {
       body.innerHTML = '<div class="empty">Nothing here yet. Analyze a posting with a company and role filled in, and it lands in your pipeline.</div>';
@@ -517,14 +533,14 @@ async function loadPipeline() {
         body: JSON.stringify({ status: sel.value })
       });
     }));
-  } catch { body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>'; }
+  } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message || "Couldn't reach the API. Is uvicorn running?")}</div>`; }
 }
 
 async function loadPicks() {
   const body = $("picksBody");
   body.innerHTML = '<p class="hint">Loading…</p>';
   try {
-    const data = await (await fetch(API + "/top-picks")).json();
+    const data = await getJSON("/top-picks");
     if (!data.picks.length) {
       body.innerHTML = `<div class="empty">Nothing open at ${data.min_score}% or better right now. Score more postings, or check the pipeline for ones you've already applied to.</div>`;
       return;
@@ -544,8 +560,8 @@ async function loadPicks() {
             : `<p class="hint pick-letter">No letter drafted yet — the scout writes one when it scores a posting at 65% or better.</p>`}
         </div>
       </div>`).join("");
-  } catch {
-    body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>';
+  } catch (e) {
+    body.innerHTML = `<div class="empty">${esc(e.message || "Couldn't reach the API. Is uvicorn running?")}</div>`;
   }
 }
 
@@ -557,9 +573,7 @@ async function loadInsights() {
   busy("insightsBtn", "insightsSpin", true);
   body.innerHTML = "";
   try {
-    const r = await fetch(API + "/insights");
-    if (!r.ok) throw new Error((await r.json()).detail || "Request failed");
-    const data = await r.json();
+    const data = await getJSON("/insights");
     if (!data.themes.length) {
       body.innerHTML = `<div class="empty">No repeating pattern across ${data.postings_analyzed} scored posting(s) yet. The gaps so far are one-offs — score more postings and check back.</div>`;
       return;
@@ -607,13 +621,22 @@ async function askQuestion() {
   }
 }
 
+async function getJSON(path) { return checkJSON(path, await fetch(API + path)); }
+
 async function postJSON(path, data) {
   const r = await fetch(API + path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
   });
+  return checkJSON(path, r);
+}
+
+async function checkJSON(path, r) {
   if (!r.ok) {
     let msg = "Request failed (" + r.status + ")";
     try { msg = (await r.json()).detail || msg; } catch {}
+    // A 404 on a route the page knows about means the server is older than this
+    // page - almost always uvicorn started without --reload before the route existed.
+    if (r.status === 404) msg = "The API has no " + path + " route. Restart uvicorn (with --reload) - it's running an older build of api.py.";
     throw new Error(msg);
   }
   return r.json();

@@ -9,7 +9,11 @@ from insights_agent import find_gap_themes
 from ask_agent import ask, MAX_QUESTION_CHARS
 from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
 
-app = FastAPI(title="Job Copilot", version="0.5.0")
+# The frontend compares this against its own baked-in UI_VERSION on load, so a
+# server running older code than the page announces itself instead of 404-ing.
+APP_VERSION = "0.5.0"
+
+app = FastAPI(title="Job Copilot", version=APP_VERSION)
 
 class MatchRequest(BaseModel):
     posting: str
@@ -35,7 +39,7 @@ class AskRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}
 
 @app.post("/match", response_model=MatchReport)
 def match(request: MatchRequest):

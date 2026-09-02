@@ -70,7 +70,13 @@ def run_model_cases() -> tuple[int, int]:
     a = ask("Which company has the best engineering culture?", PIPELINE)
     passed += _check("refuses_what_tracker_cannot_know", not a.answerable, f"got: {a.answer}")
 
-    return passed, 3
+    # The scope gate is a model call, so it can refuse a question the data covers.
+    # This phrasing once did exactly that - the guard cases missed it because they
+    # exercise out_of_scope() (regex), not in_scope() (the model).
+    a = ask("What skills am I missing most often?", PIPELINE)
+    passed += _check("gate_allows_a_question_the_columns_cover", a.answerable, f"got: {a.answer}")
+
+    return passed, 4
 
 if __name__ == "__main__":
     gp, gt = run_guard_cases()

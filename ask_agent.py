@@ -35,8 +35,8 @@ MAX_RETRIES = 1
 
 # Columns the tracker actually has. Stated in the prompt so "answerable" has a
 # definition the model can check against instead of guessing.
-SCHEMA = ("id, company, role, match_score (0-100), status, date analyzed, "
-          "and the skills a posting wanted that the resume did not answer")
+SCHEMA = ("id, company, role, match_score (0-100), status, date analyzed, and "
+          "missing_keywords - the skills a posting asked for that the resume did not cover")
 
 # Questions tracker.db provably cannot answer: there is no column behind them, so
 # any answer would be invention. Refused before a model call - cheaper and steadier
@@ -78,6 +78,12 @@ Can the question below be answered using ONLY those columns?
 
 Answer true if it asks about the candidate's own scores, statuses, dates, the
 companies or roles in their list, the skills they were missing, or counts of those.
+
+Aggregates count as answerable: how often something repeats, what is most or least
+common, totals, averages, rankings, "which is best/worst". No column stores a
+frequency, but every row is available and the counting is already done before the
+answer is written - so treat "what am I missing most often" as answerable, not as
+a fact the tracker lacks.
 
 Answer false if answering needs anything else - what a company is like to work for,
 its culture, size, funding, products, reputation or tech stack; pay; the future;
