@@ -1,6 +1,7 @@
 """Week 1 pipeline: fetch feed -> filter -> score with matcher -> log as 'scouted'."""
 from feeds import fetch_jobs
 from scout_agent import judge_posting
+from letter_agent import draft_letter, save_draft
 from match import analyze
 from tracker import log_application, update_status, list_applications
 
@@ -40,6 +41,11 @@ def run_scout():
         app_id = log_application(job["company"], job["role"], report)
         update_status(app_id, "scouted")
         print(f"   → {report.match_score}%  (logged as #{app_id})")
+        if report.match_score >= 65:
+            print(f"   ✍️  Drafting letter (score ≥ 65)...")
+            letter = draft_letter(job["role"], job["company"], job["posting"])
+            path = save_draft(app_id, job["company"], job["role"], letter)
+            print(f"   💾 Draft saved: {path}")
         scored += 1
 
     print(f"\n✅ Scout run complete: {scored} new posting(s) scored and logged.")
