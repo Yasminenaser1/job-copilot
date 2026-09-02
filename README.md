@@ -95,3 +95,49 @@ python run_evals.py
 - [ ] LLM input validation ("is this actually a job posting?")
 - [ ] Expanded eval suite (license/degree detection, not-a-posting case)
 - [ ] Docker deployment
+
+## v2: Agent Edition
+
+Job Copilot now hunts on its own. A scheduled pipeline fetches postings from permitted
+job feeds, and a crew of local agents (CrewAI + Ollama) decides what deserves attention:
+
+    RemoteOK feed
+        |
+        v
+    cheap filter (title keywords, word-boundary matched)
+        |
+        v
+    Scout agent -- judges genuine fit: rejects keyword bait,
+        |          non-engineering roles, and senior-level traps
+        v
+    matcher (RAG + rubric scoring, from v1)
+        |
+        v
+    65+ score? -> Letter agent drafts a grounded cover letter to drafts/
+        |
+        v
+    tracker (status: "scouted") -> visible in the UI's Scouted view
+
+Run once: `python scout_run.py` - or on a schedule: `python scheduler.py` (visible,
+killable loop; nothing runs hidden in the background).
+
+GUARDRAIL BY DESIGN: the system never applies, sends, or touches any account.
+Agents prepare; the human decides.
+
+### v2 lessons learned
+
+- Feed tags lie: a Handyperson posting arrived tagged `golang`. Filtering moved to
+  role titles only.
+- Substring matching is a trap: the keyword "ai" matched "mAIntenance" and "mAIl
+  carrier" until word-boundary regex fixed it.
+- Keywords are not judgment: the v1 matcher scored a "Course Writer, UX/AI" posting
+  85% because it mentions AI constantly. The Scout agent rejects it with the correct
+  reason - which is exactly why the agent layer exists.
+- Installing CrewAI silently upgraded chromadb and broke the existing vector store
+  (Rust panic on open). Fixed by rebuilding the index - a classic dependency-collision
+  lesson.
+
+### Scout evals
+
+`python scout_evals.py` - 3 cases: junior-fit approval, keyword-bait rejection,
+seniority-trap rejection. Current: 3/3.
