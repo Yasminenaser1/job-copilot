@@ -6,6 +6,7 @@ from cover_letter import write_cover_letter
 from tracker import log_application, update_status, list_applications
 from gaps import keyword_rows
 from insights_agent import find_gap_themes
+from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
 
 app = FastAPI(title="Job Copilot", version="0.4.0")
 
@@ -59,6 +60,18 @@ def insights():
         "themes": [t.model_dump() for t in themes],
     }
 
+@app.get("/top-picks")
+def picks(limit: int = MAX_PICKS):
+    """The best still-open postings, with any letter already on disk attached.
+
+    Pure local read - no model call, so this view works with ollama down.
+    """
+    limit = max(1, min(limit, 20))
+    return {
+        "min_score": MIN_PICK_SCORE,
+        "picks": top_picks(limit),
+    }
+
 @app.get("/applications")
 def applications():
     return list_applications()
@@ -78,9 +91,6 @@ def _safe_analyze(posting: str) -> MatchReport:
         return analyze(posting)
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e))
-
-# ---- serve the frontend ----
-from fastapi.responses import FileResponse
 
 # ---- serve the frontend ----
 from fastapi.responses import FileResponse

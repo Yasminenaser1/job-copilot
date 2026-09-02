@@ -147,6 +147,32 @@ td select{width:auto; padding:6px 10px; font-size:13px}
   margin-top:20px; padding:34px; text-align:center; color:var(--muted);
   border:1px dashed var(--line); border-radius:var(--radius);
 }
+.pick{
+  margin-top:14px; padding:18px 20px; border-radius:var(--radius);
+  background:var(--surface); border:1px solid var(--line);
+}
+.pick-top{display:flex; align-items:center; gap:12px; margin-bottom:4px}
+.pick-rank{
+  font-family:"Space Grotesk"; font-weight:700; font-size:13px; color:var(--muted);
+  min-width:22px;
+}
+.pick-role{font-family:"Space Grotesk"; font-weight:600; font-size:16px}
+.pick-meta{color:var(--muted); font-size:13px; margin:0 0 12px 34px}
+.pick-body{margin-left:34px}
+.pick-body h4{font-size:12.5px; font-weight:500; color:var(--muted); margin-bottom:8px}
+.pick-letter{margin-top:14px}
+.pick-letter summary{
+  cursor:pointer; color:var(--accent); font-size:13.5px; font-weight:600;
+  list-style:none; width:fit-content;
+}
+.pick-letter summary::-webkit-details-marker{display:none}
+.pick-letter summary::before{content:"\25B8  "}
+.pick-letter[open] summary::before{content:"\25BE  "}
+.pick-letter pre{
+  margin-top:10px; padding:14px 16px; border-radius:10px; white-space:pre-wrap;
+  background:var(--surface-2); border:1px solid var(--line);
+  font:inherit; font-size:14px; line-height:1.6;
+}
 .spinner{
   display:none; width:16px; height:16px; border-radius:50%;
   border:2px solid var(--line); border-top-color:var(--accent);
@@ -175,6 +201,7 @@ td select{width:auto; padding:6px 10px; font-size:13px}
     <nav class="nav" aria-label="Sections">
       <button class="active" data-view="match">Match a posting</button>
       <button data-view="letter">Cover letter</button>
+      <button data-view="picks">Top Picks</button>
       <button data-view="pipeline">Pipeline</button>
       <button data-view="insights">Insights</button>
     </nav>
@@ -267,6 +294,12 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       </div>
     </section>
 
+    <section class="view" id="view-picks">
+      <h1>Top Picks</h1>
+      <p class="sub">The best postings you haven't acted on yet, best first. Anything already applied to or rejected drops off. Reads what's already on disk — no model call, so this loads instantly even with ollama down.</p>
+      <div id="picksBody"></div>
+    </section>
+
     <section class="view" id="view-pipeline">
       <h1>Pipeline</h1>
       <p class="sub">Every posting you've analyzed, sorted by fit. Update a status as you apply, interview, and hear back.</p>
@@ -318,6 +351,7 @@ document.querySelectorAll(".nav button").forEach(btn => {
     btn.classList.add("active");
     $("view-" + btn.dataset.view).classList.add("active");
     if (btn.dataset.view === "pipeline") loadPipeline();
+    if (btn.dataset.view === "picks") loadPicks();
   });
 });
 
@@ -447,6 +481,35 @@ async function loadPipeline() {
       });
     }));
   } catch { body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>'; }
+}
+
+async function loadPicks() {
+  const body = $("picksBody");
+  body.innerHTML = '<p class="hint">Loading…</p>';
+  try {
+    const data = await (await fetch(API + "/top-picks")).json();
+    if (!data.picks.length) {
+      body.innerHTML = `<div class="empty">Nothing open at ${data.min_score}% or better right now. Score more postings, or check the pipeline for ones you've already applied to.</div>`;
+      return;
+    }
+    body.innerHTML = data.picks.map(p => `
+      <div class="pick">
+        <div class="pick-top">
+          <span class="pick-rank">${p.rank}</span>
+          <span class="score-pill ${p.match_score >= 70 ? "s-high" : "s-mid"}">${p.match_score}</span>
+          <span class="pick-role">${esc(p.role)}</span>
+        </div>
+        <div class="pick-meta">${esc(p.company)} · #${p.id} · ${esc(p.status || "")} · ${esc(p.analyzed_on || "")}</div>
+        <div class="pick-body">
+          ${p.missing_keywords.length ? `<h4>Gaps to address</h4><div class="chips">${chips(p.missing_keywords, "miss")}</div>` : ""}
+          ${p.letter
+            ? `<details class="pick-letter"><summary>Cover letter ready</summary><pre>${esc(p.letter)}</pre></details>`
+            : `<p class="hint pick-letter">No letter drafted yet — the scout writes one when it scores a posting at 65% or better.</p>`}
+        </div>
+      </div>`).join("");
+  } catch {
+    body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>';
+  }
 }
 
 $("insightsBtn").addEventListener("click", loadInsights);
