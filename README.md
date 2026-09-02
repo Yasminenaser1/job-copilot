@@ -76,7 +76,10 @@ uvicorn api:app --reload
 ## Run the evals
 
 ```bash
-python run_evals.py
+python run_evals.py       # v1 matcher: scoring, consistency, input validation
+python scout_evals.py     # Scout agent: fit judgment, keyword bait, seniority traps
+python insights_evals.py  # Insights agent: real themes found, invented ones dropped
+python ask_evals.py       # Ask: answers from the data, refusals for everything else
 ```
 
 ## Lessons learned
@@ -92,7 +95,7 @@ python run_evals.py
 
 ## Roadmap
 
-- [ ] LLM input validation ("is this actually a job posting?")
+- [x] LLM input validation ("is this actually a job posting?")
 - [ ] Expanded eval suite (license/degree detection, not-a-posting case)
 - [ ] Docker deployment
 
@@ -142,6 +145,35 @@ Agents prepare; the human decides.
 `python scout_evals.py` - 3 cases: junior-fit approval, keyword-bait rejection,
 seniority-trap rejection. Current: 3/3.
 
+## Insights: what your gaps add up to
+
+One `missing_keywords` row tells you nothing. Forty of them are a pattern. The Insights
+agent reads every scored posting and clusters the gaps into themes - "application
+security", say - each one carrying the postings that back it.
+
+It is scoped to skill gaps on purpose. It says nothing about outcomes: with a handful
+of rows and no rejections logged there is no funnel to analyze, and a model asked about
+one anyway will invent it.
+
+Grounded the same way Ask is: every theme is checked against real row ids before it is
+returned, and a theme the rows don't support is dropped rather than softened. A single
+posting is not a pattern, so one-off gaps are dropped too.
+
+`python insights_evals.py` - 7 cases, 5 of them model-free guard tests. Current: 7/7.
+
+## Top Picks: what to act on next
+
+The pipeline lists everything. Top Picks answers the narrower question - what should I
+do today? - with the best still-open postings and whatever cover letter the scout has
+already drafted, attached and ready to read.
+
+A pick is deliberately narrow: not already applied to or rejected, and scoring at least
+65 - the same floor the scout uses before it bothers drafting a letter. Calling a 40%
+match a "top pick" would make the view flattery rather than triage.
+
+No model call and no network: it is a pure read over `tracker.db` and the `drafts/`
+folder, so it opens instantly and still works with ollama down.
+
 ## Ask: questions in plain English
 
 The Insights view answers one question the code picked. **Ask** answers the one you
@@ -177,7 +209,7 @@ Read-only and stateless: it never writes to the tracker, and nothing about what 
 asked is stored. `python ask_agent.py "what am I missing most?"` from the CLI, or the
 Ask tab in the UI.
 
-`python ask_evals.py` - 12 cases, 9 of them model-free guard tests. Current: 12/12.
+`python ask_evals.py` - 13 cases, 9 of them model-free guard tests. Current: 13/13.
 
 ### Ask lessons learned
 
@@ -186,3 +218,14 @@ Ask tab in the UI.
   date. Splitting the scope decision into its own call fixed it - one job per call.
 - "Be blunt" produced answers like `0` and `penetration testing methodologies`. Blunt
   is not the same as terse; the prompt now asks for complete sentences.
+- The scope gate refused "what am I missing most often?" - a question the tracker
+  plainly covers. No column stores a *frequency*, so the gate ruled the whole class of
+  aggregates unanswerable, never mind that `_facts()` counts them in Python before the
+  model sees anything. A guard that only understands columns will refuse real questions.
+- That bug survived a green eval suite. The guard cases assert on `out_of_scope()`, the
+  regex list - but the refusal came from `in_scope()`, the model call, which had no
+  coverage at all. Test the layer that made the decision, not the one next to it.
+- A bare `Not Found` in the UI turned out to be a *stale server*: uvicorn had been
+  started without `--reload` before the route existed, so the page was newer than the
+  API. `/health` now reports a version the page checks on load, because "your server is
+  older than your frontend" is not something a 404 will ever tell you.
