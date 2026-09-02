@@ -1,14 +1,22 @@
 # Yasmine Naser - Resume
 
+## Summary
+Early-career AI Automation Engineer. One year of hands-on Python; builds and ships LLM-powered systems using AI-assisted development. Based in Dallas, TX.
+
 ## Skills
-(your real skills list)
+Python, SQL, RAG, embeddings, vector databases (ChromaDB), FastAPI, Pydantic, structured outputs, LLM evals, prompt engineering, Ollama, SQLite, Docker (basic), Git
 
 ## Experience
-(your internship: title, company, dates, and your bullet points)
-(any earlier jobs)
+AI Automation Engineer Intern - OptiU Inc., Dallas, TX (Summer 2026)
+- Built OptiReach, an autonomous AI lead-generation system automating lead research end-to-end
+- Built an AI video production pipeline for product demo videos
+
+Tiff's Treats - team member (before transitioning into tech)
 
 ## Projects
-(my-ai, model-router, job-copilot - a line or two each)
+job-copilot (2026) - Full-stack local AI job-search tool: RAG matching over resume embeddings (ChromaDB + Ollama), rubric-scored with Pydantic-validated structured outputs, LLM input-validation gate, 7-case eval suite, FastAPI REST API, SQLite tracker, Docker, custom web UI. 100% local, zero API costs.
+my-ai (2026) - Local AI assistant with persistent memory (Python, Ollama). Personal project.
+model-router (2026, paused) - Routes queries between local AI models. Personal project.
 
 ## Education
-(school, program, dates)
+(add your real schooling here)

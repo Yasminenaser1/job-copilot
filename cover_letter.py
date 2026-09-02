@@ -13,6 +13,7 @@ RULES:
 - Mention 2-3 specific things from the profile that match the posting.
 - Confident but not arrogant. No cliches like "I am writing to express my interest".
 - Address it to the hiring team at {company}.
+- Output ONLY the letter itself. No preamble, no introduction like "Here is a cover letter", no commentary before or after.
 
 CANDIDATE PROFILE:
 {profile}
