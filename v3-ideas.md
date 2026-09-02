@@ -13,6 +13,10 @@ If v3 ever gets signed, it gets its own contract with its own finish line.
 - More job feeds beyond RemoteOK (WeWorkRemotely, HN Who's Hiring, etc.) - more real openings to judge
 - "Top Picks" daily digest view - the 3 best new matches surfaced with letters attached, instead of a table
 - Smarter thresholds - only surface 70%+, auto-bury the rest
+- ~~Ask: free-text questions over the tracker~~ SHIPPED Sep 2 (ask_agent.py, 12/12 evals).
+  Known trade-off: the scope gate over-refuses advice-shaped questions ("which roles
+  should I focus on this week?"). Refusing is the safe side of that line; revisit only
+  if it gets annoying in real use.
 - ~~AI insights agent~~ SHIPPED Sep 2 as skill-gap themes only (insights_agent.py, 7/7 evals).
   Still parked: outcome/funnel insights - blocked until rejection memory exists and
   enough applications are logged to have a funnel at all.

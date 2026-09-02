@@ -6,9 +6,10 @@ from cover_letter import write_cover_letter
 from tracker import log_application, update_status, list_applications
 from gaps import keyword_rows
 from insights_agent import find_gap_themes
+from ask_agent import ask, MAX_QUESTION_CHARS
 from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
 
-app = FastAPI(title="Job Copilot", version="0.4.0")
+app = FastAPI(title="Job Copilot", version="0.5.0")
 
 class MatchRequest(BaseModel):
     posting: str
@@ -28,6 +29,9 @@ class CoverLetterRequest(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+
+class AskRequest(BaseModel):
+    question: str
 
 @app.get("/health")
 def health():
@@ -59,6 +63,20 @@ def insights():
         "postings_analyzed": len(rows),
         "themes": [t.model_dump() for t in themes],
     }
+
+@app.post("/ask")
+def ask_question(request: AskRequest):
+    """Answer one question about the tracked pipeline. Read-only, stateless.
+
+    Returns 200 with answerable=false rather than an error when the tracker cannot
+    answer - a refusal is a real answer here, not a failure.
+    """
+    if len(request.question) > MAX_QUESTION_CHARS * 4:
+        raise HTTPException(status_code=400, detail="Question too long")
+    try:
+        return ask(request.question).model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Ask agent unavailable: {e}")
 
 @app.get("/top-picks")
 def picks(limit: int = MAX_PICKS):

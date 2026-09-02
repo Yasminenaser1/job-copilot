@@ -173,6 +173,23 @@ td select{width:auto; padding:6px 10px; font-size:13px}
   background:var(--surface-2); border:1px solid var(--line);
   font:inherit; font-size:14px; line-height:1.6;
 }
+.ask-row{display:flex; gap:10px; align-items:flex-start}
+.ask-row input[type=text]{flex:1}
+.ask-suggest{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.ask-suggest button{
+  all:unset; cursor:pointer; font-size:13px; padding:5px 11px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--line); color:var(--muted);
+  transition:color .15s, border-color .15s;
+}
+.ask-suggest button:hover{color:var(--ink); border-color:var(--accent)}
+.ask-suggest button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.answer{
+  margin-top:22px; padding:18px 20px; border-radius:var(--radius);
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent);
+}
+.answer.refused{border-left-color:var(--warn)}
+.answer p{font-size:15px; line-height:1.6}
+.answer .hint{margin-top:10px}
 .spinner{
   display:none; width:16px; height:16px; border-radius:50%;
   border:2px solid var(--line); border-top-color:var(--accent);
@@ -204,6 +221,7 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <button data-view="picks">Top Picks</button>
       <button data-view="pipeline">Pipeline</button>
       <button data-view="insights">Insights</button>
+      <button data-view="ask">Ask</button>
     </nav>
     <div class="status">
       <div class="theme-toggle" id="themeToggle" style="margin-bottom:12px">
@@ -319,6 +337,25 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <span class="hint" id="insightsHint">The local model reads your whole pipeline; this takes ~30 seconds.</span>
       <div class="error" id="insightsError"></div>
       <div id="insightsBody" style="margin-top:18px"></div>
+    </section>
+
+    <section class="view" id="view-ask">
+      <h1>Ask</h1>
+      <p class="sub">Ask anything about your own pipeline in plain English. The local model reads only your tracked postings &mdash; it never writes to them, and it refuses rather than guesses when your tracker doesn't hold the answer.</p>
+      <form class="ask-row" id="askForm">
+        <input type="text" id="askInput" maxlength="300" autocomplete="off"
+               placeholder="e.g. What skill keeps costing me points?" aria-label="Your question">
+        <button class="btn" type="submit" id="askBtn">Ask</button>
+        <div class="spinner" id="askSpin" style="margin-top:13px"></div>
+      </form>
+      <div class="ask-suggest" id="askSuggest">
+        <button type="button">What skill keeps costing me points?</button>
+        <button type="button">What is my best match so far?</button>
+        <button type="button">How many postings have I applied to?</button>
+        <button type="button">Which postings am I still sitting on?</button>
+      </div>
+      <div class="error" id="askError"></div>
+      <div id="askBody"></div>
     </section>
   </main>
 </div>
@@ -541,6 +578,32 @@ async function loadInsights() {
     showError("insightsError", e.message || "Couldn't reach the API. Is uvicorn running?");
   } finally {
     busy("insightsBtn", "insightsSpin", false);
+  }
+}
+
+$("askForm").addEventListener("submit", (e) => { e.preventDefault(); askQuestion(); });
+document.querySelectorAll("#askSuggest button").forEach(b =>
+  b.addEventListener("click", () => { $("askInput").value = b.textContent; askQuestion(); }));
+
+async function askQuestion() {
+  const question = $("askInput").value.trim();
+  if (!question) return;
+  const body = $("askBody");
+  hide("askError");
+  busy("askBtn", "askSpin", true);
+  body.innerHTML = "";
+  try {
+    const a = await postJSON("/ask", { question });
+    const cited = a.evidence_ids.length
+      ? `<div class="hint">From posting${a.evidence_ids.length > 1 ? "s" : ""} ${a.evidence_ids.map(i => "#" + i).join(", ")} — check them in Pipeline.</div>`
+      : "";
+    body.innerHTML = a.answerable
+      ? `<div class="answer"><p>${esc(a.answer)}</p>${cited}</div>`
+      : `<div class="answer refused"><p>${esc(a.answer)}</p><div class="hint">It refuses instead of guessing — an answer your tracker can't back would be invented.</div></div>`;
+  } catch (e) {
+    showError("askError", e.message || "Couldn't reach the API. Is uvicorn running?");
+  } finally {
+    busy("askBtn", "askSpin", false);
   }
 }
 

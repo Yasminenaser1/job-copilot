@@ -141,3 +141,48 @@ Agents prepare; the human decides.
 
 `python scout_evals.py` - 3 cases: junior-fit approval, keyword-bait rejection,
 seniority-trap rejection. Current: 3/3.
+
+## Ask: questions in plain English
+
+The Insights view answers one question the code picked. **Ask** answers the one you
+type - "what skill keeps costing me points?", "how many have I applied to?" - against
+your own tracker, on the same local model. Still zero API cost.
+
+An open question box is riskier than a fixed report, because an open prompt invites
+the model to answer from the internet's idea of job searching instead of from your
+rows. Four things keep it honest:
+
+1. **A scope gate first.** One cheap yes/no call decides whether the question can be
+   answered from the columns the tracker actually has. Culture, pay, company size,
+   the future - refused before the answering call ever runs.
+2. **A hard-coded refusal list.** Salary, visas, recruiter contacts and "what are my
+   chances" never reach the model at all: there is no column behind them.
+3. **Python does the arithmetic.** Counts, averages and status totals are computed in
+   code and handed to the model as facts, so it cannot invent a funnel it doesn't have.
+4. **Citations are verified.** Every answer names the posting ids behind it, checked
+   against real rows. An answer citing postings that don't exist is dropped whole.
+
+    your question --> length + scope guards (no model call)
+                            |
+                            v
+                    scope gate: answerable from these columns? --> no: refuse
+                            |
+                            v
+              FACTS (counted in Python) + PIPELINE rows --> llama3.1:8b
+                            |
+                            v
+                  citations checked against real ids --> answer, or refusal
+
+Read-only and stateless: it never writes to the tracker, and nothing about what you
+asked is stored. `python ask_agent.py "what am I missing most?"` from the CLI, or the
+Ask tab in the UI.
+
+`python ask_evals.py` - 12 cases, 9 of them model-free guard tests. Current: 12/12.
+
+### Ask lessons learned
+
+- Told to answer *and* to police itself in one call, the model does the fun half: it
+  rated a company's "engineering culture" from a row that holds a match score and a
+  date. Splitting the scope decision into its own call fixed it - one job per call.
+- "Be blunt" produced answers like `0` and `penetration testing methodologies`. Blunt
+  is not the same as terse; the prompt now asks for complete sentences.
