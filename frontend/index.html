@@ -176,6 +176,7 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <button class="active" data-view="match">Match a posting</button>
       <button data-view="letter">Cover letter</button>
       <button data-view="pipeline">Pipeline</button>
+      <button data-view="insights">Insights</button>
     </nav>
     <div class="status">
       <div class="theme-toggle" id="themeToggle" style="margin-bottom:12px">
@@ -275,6 +276,16 @@ td select{width:auto; padding:6px 10px; font-size:13px}
         <button data-pf="applied">Applied</button>
       </div>
       <div id="pipelineBody"></div>
+    </section>
+
+    <section class="view" id="view-insights">
+      <h1>Insights</h1>
+      <p class="sub">Skill gaps that repeat across your scored postings. A theme only appears when the same skill is missing from at least two postings — every one cites the postings behind it, so you can check the claim.</p>
+      <button class="btn" id="insightsBtn">Find patterns</button>
+      <div class="spinner" id="insightsSpin"></div>
+      <span class="hint" id="insightsHint">The local model reads your whole pipeline; this takes ~30 seconds.</span>
+      <div class="error" id="insightsError"></div>
+      <div id="insightsBody" style="margin-top:18px"></div>
     </section>
   </main>
 </div>
@@ -436,6 +447,38 @@ async function loadPipeline() {
       });
     }));
   } catch { body.innerHTML = '<div class="empty">Couldn\'t reach the API. Is uvicorn running?</div>'; }
+}
+
+$("insightsBtn").addEventListener("click", loadInsights);
+
+async function loadInsights() {
+  const body = $("insightsBody");
+  hide("insightsError");
+  busy("insightsBtn", "insightsSpin", true);
+  body.innerHTML = "";
+  try {
+    const r = await fetch(API + "/insights");
+    if (!r.ok) throw new Error((await r.json()).detail || "Request failed");
+    const data = await r.json();
+    if (!data.themes.length) {
+      body.innerHTML = `<div class="empty">No repeating pattern across ${data.postings_analyzed} scored posting(s) yet. The gaps so far are one-offs — score more postings and check back.</div>`;
+      return;
+    }
+    body.innerHTML = `<p class="hint">Across ${data.postings_analyzed} scored posting(s).</p>` +
+      data.themes.map(t => `
+        <div class="report" style="display:block;margin-bottom:14px">
+          <div class="skill-block">
+            <h3>${esc(t.theme)}</h3>
+            <div class="chips">${chips(t.keywords, "miss")}</div>
+            <div class="verdict">${esc(t.why_it_matters)}</div>
+            <div class="hint">Seen in ${t.evidence_ids.length} postings: ${t.evidence_ids.map(i => "#" + i).join(", ")}</div>
+          </div>
+        </div>`).join("");
+  } catch (e) {
+    showError("insightsError", e.message || "Couldn't reach the API. Is uvicorn running?");
+  } finally {
+    busy("insightsBtn", "insightsSpin", false);
+  }
 }
 
 async function postJSON(path, data) {

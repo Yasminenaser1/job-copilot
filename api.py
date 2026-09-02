@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from match import analyze, MatchReport, validate_posting
 from cover_letter import write_cover_letter
 from tracker import log_application, update_status, list_applications
+from gaps import keyword_rows
+from insights_agent import find_gap_themes
 
 app = FastAPI(title="Job Copilot", version="0.4.0")
 
@@ -43,6 +45,19 @@ def analyze_and_log(request: AnalyzeRequest):
 @app.post("/cover-letter")
 def cover_letter(request: CoverLetterRequest):
     return {"cover_letter": write_cover_letter(request.posting, request.company)}
+
+@app.get("/insights")
+def insights():
+    """Read-only skill-gap themes across every scored posting. Never writes."""
+    rows = keyword_rows()
+    try:
+        themes = find_gap_themes(rows)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Insights agent unavailable: {e}")
+    return {
+        "postings_analyzed": len(rows),
+        "themes": [t.model_dump() for t in themes],
+    }
 
 @app.get("/applications")
 def applications():
