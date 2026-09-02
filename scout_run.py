@@ -1,5 +1,6 @@
 """Week 1 pipeline: fetch feed -> filter -> score with matcher -> log as 'scouted'."""
 from feeds import fetch_jobs
+from scout_agent import judge_posting
 from match import analyze
 from tracker import log_application, update_status, list_applications
 
@@ -28,6 +29,12 @@ def run_scout():
             print(f"⏭️  Skipping (description too thin): {job['role']} @ {job['company']}")
             continue
 
+        print(f"🤖 Scout judging: {job['role']} @ {job['company']} ...")
+        verdict = judge_posting(job["role"], job["company"], job["posting"])
+        if not verdict.worth_pursuing:
+            print(f"   🚫 Scout rejected: {verdict.reason}")
+            continue
+        print(f"   👍 Scout approved: {verdict.reason}")
         print(f"⚙️  Scoring: {job['role']} @ {job['company']} ...")
         report = analyze(job["posting"])
         app_id = log_application(job["company"], job["role"], report)
