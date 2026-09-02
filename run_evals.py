@@ -4,6 +4,13 @@ from match import analyze
 
 CONSISTENCY_TOLERANCE = 10   # two runs of the same posting must be within this many points
 
+def _expect(terms: list[str], actual: list[str], field: str, failures: list[str]):
+    """Case-insensitive substring check that every term shows up in one field."""
+    found = " ".join(actual).lower()
+    for term in terms:
+        if term.lower() not in found:
+            failures.append(f"expected '{term}' in {field}, got {actual}")
+
 def run_case(case: dict) -> tuple[bool, list[str]]:
     """Returns (passed, list of failure reasons)."""
     failures = []
@@ -16,11 +23,14 @@ def run_case(case: dict) -> tuple[bool, list[str]]:
     if not (case["min_score"] <= r1.match_score <= case["max_score"]):
         failures.append(f"score {r1.match_score} outside [{case['min_score']}, {case['max_score']}]")
 
-    # Check 2: required skills detected (case-insensitive substring match)
-    found = " ".join(r1.matching_skills).lower()
-    for skill in case["must_match"]:
-        if skill.lower() not in found:
-            failures.append(f"expected '{skill}' in matching_skills, got {r1.matching_skills}")
+    # Check 2: the posting's requirements land in the right bucket.
+    #   must_match -> what the resume genuinely covers  (matching_skills)
+    #   must_miss  -> what it doesn't                   (missing_keywords)
+    # A wrong-fit case belongs in must_miss. Asserting "BSN degree" against
+    # matching_skills tested nothing: an empty matching_skills is the correct
+    # answer for a nursing role, so the case could only ever fail.
+    _expect(case.get("must_match", []), r1.matching_skills, "matching_skills", failures)
+    _expect(case.get("must_miss", []), r1.missing_keywords, "missing_keywords", failures)
 
     # Check 3: consistency between two runs
     drift = abs(r1.match_score - r2.match_score)
@@ -29,24 +39,8 @@ def run_case(case: dict) -> tuple[bool, list[str]]:
 
     return (len(failures) == 0, failures)
 
-def main():
-    cases = json.load(open("evals/cases.json"))
-    passed = 0
-    print(f"🧪 Running {len(cases)} eval cases...\n")
-
-    for case in cases:
-        ok, failures = run_case(case)
-        status = "✅ PASS" if ok else "❌ FAIL"
-        print(f"{status}  {case['name']}")
-        for f in failures:
-            print(f"       ↳ {f}")
-        passed += ok
-
-    print(f"\n📊 {passed}/{len(cases)} passed ({100 * passed // len(cases)}%)")
-
 def run_all():
-    import json as _json
-    cases = _json.load(open("evals/cases.json"))
+    cases = json.load(open("evals/cases.json"))
     passed = 0
     print(f"🧪 Running {len(cases)} eval cases...\n")
     for case in cases:

@@ -76,7 +76,7 @@ uvicorn api:app --reload
 ## Run the evals
 
 ```bash
-python run_evals.py       # v1 matcher: scoring, consistency, input validation
+python run_evals.py       # v1 matcher: scoring, consistency, input validation (7/7)
 python scout_evals.py     # Scout agent: fit judgment, keyword bait, seniority traps
 python insights_evals.py  # Insights agent: real themes found, invented ones dropped
 python ask_evals.py       # Ask: answers from the data, refusals for everything else
@@ -92,6 +92,12 @@ python ask_evals.py       # Ask: answers from the data, refusals for everything 
 - Confident garbage: the API happily scored placeholder text at 85% —
   length checks catch short garbage, not plausible garbage. Semantic input
   validation is the planned fix.
+- Two eval cases failed against a matcher that was right all along. The wrong-fit
+  nurse and lawyer cases asserted "BSN degree" and "representing clients" against
+  `matching_skills` — but those are exactly what the resume *lacks*, so an empty
+  `matching_skills` was the correct answer and the cases could only ever fail.
+  Cases now say `must_miss` for the requirements a posting has and the profile
+  doesn't. A red test can be wrong about which field it reads.
 
 ## Roadmap
 
