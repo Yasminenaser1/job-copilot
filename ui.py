@@ -87,7 +87,7 @@ with tab_match:
             st.write(", ".join(report.projects_to_emphasize))
             st.info(report.one_line_verdict)
             if company and role:
-                app_id = log_application(company, role, report)
+                app_id = log_application(company, role, report, description=posting)
                 st.success(f"Logged to tracker as #{app_id}")
 
 with tab_letter:

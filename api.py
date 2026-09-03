@@ -48,7 +48,8 @@ def match(request: MatchRequest):
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze_and_log(request: AnalyzeRequest):
     report = _safe_analyze(request.posting)
-    app_id = log_application(request.company, request.role, report)
+    app_id = log_application(request.company, request.role, report,
+                             description=request.posting)
     return AnalyzeResponse(application_id=app_id, report=report)
 
 @app.post("/cover-letter")

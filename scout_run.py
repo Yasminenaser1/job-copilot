@@ -46,7 +46,8 @@ def run_scout():
         print(f"⚙️  Scoring: {job['role']} @ {job['company']} ...")
         report = analyze(job["posting"])
         app_id = log_application(job["company"], job["role"], report,
-                                 url=job["url"], source=job["source"])
+                                 url=job["url"], source=job["source"],
+                                 description=job["posting"])
         update_status(app_id, "scouted")
         print(f"   → {report.match_score}%  (logged as #{app_id})  {job['url'] or 'no link'}")
         if report.match_score >= 65:

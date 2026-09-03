@@ -11,6 +11,7 @@ DB_PATH = "tracker.db"
 ADDED_COLUMNS = {
     "url": "TEXT",      # where to actually apply
     "source": "TEXT",   # which board it came from
+    "description": "TEXT",  # the posting text itself
 }
 
 def init_db():
@@ -25,7 +26,8 @@ def init_db():
                 status TEXT DEFAULT 'analyzed',
                 analyzed_on TEXT,
                 url TEXT,
-                source TEXT
+                source TEXT,
+                description TEXT
             )
         """)
         _migrate(conn)
@@ -38,16 +40,17 @@ def _migrate(conn):
             conn.execute(f"ALTER TABLE applications ADD COLUMN {column} {coltype}")
 
 def log_application(company: str, role: str, report: MatchReport,
-                    url: str | None = None, source: str | None = None) -> int:
+                    url: str | None = None, source: str | None = None,
+                    description: str | None = None) -> int:
     """Log a scored posting. url/source are optional so a hand-pasted posting -
     which has no board behind it - logs exactly as it always did."""
     init_db()
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.execute(
-            "INSERT INTO applications (company, role, match_score, missing_keywords, analyzed_on, url, source)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO applications (company, role, match_score, missing_keywords, analyzed_on, url, source, description)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (company, role, report.match_score, ", ".join(report.missing_keywords),
-             date.today().isoformat(), url or None, source or None),
+             date.today().isoformat(), url or None, source or None, description or None),
         )
         return cur.lastrowid
 
