@@ -119,4 +119,7 @@ from fastapi.responses import FileResponse
 
 @app.get("/", include_in_schema=False)
 def home():
-    return FileResponse("frontend/index.html")
+    # no-store, because a cached page is indistinguishable from a broken one: the
+    # browser keeps serving a build from before the last edit, and its stale error
+    # text gets read as a live failure of a server that is answering fine.
+    return FileResponse("frontend/index.html", headers={"Cache-Control": "no-store"})

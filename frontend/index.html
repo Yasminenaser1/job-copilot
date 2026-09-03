@@ -549,7 +549,7 @@ async function loadPipeline() {
         body: JSON.stringify({ status: sel.value })
       });
     }));
-  } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message || "Couldn't reach the API. Is uvicorn running?")}</div>`; }
+  } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message || OFFLINE_MSG)}</div>`; }
 }
 
 async function loadPicks() {
@@ -580,7 +580,7 @@ async function loadPicks() {
         </div>
       </div>`).join("");
   } catch (e) {
-    body.innerHTML = `<div class="empty">${esc(e.message || "Couldn't reach the API. Is uvicorn running?")}</div>`;
+    body.innerHTML = `<div class="empty">${esc(e.message || OFFLINE_MSG)}</div>`;
   }
 }
 
@@ -608,7 +608,7 @@ async function loadInsights() {
           </div>
         </div>`).join("");
   } catch (e) {
-    showError("insightsError", e.message || "Couldn't reach the API. Is uvicorn running?");
+    showError("insightsError", e.message || OFFLINE_MSG);
   } finally {
     busy("insightsBtn", "insightsSpin", false);
   }
@@ -634,19 +634,31 @@ async function askQuestion() {
       ? `<div class="answer"><p>${esc(a.answer)}</p>${cited}</div>`
       : `<div class="answer refused"><p>${esc(a.answer)}</p><div class="hint">It refuses instead of guessing — an answer your tracker can't back would be invented.</div></div>`;
   } catch (e) {
-    showError("askError", e.message || "Couldn't reach the API. Is uvicorn running?");
+    showError("askError", e.message || OFFLINE_MSG);
   } finally {
     busy("askBtn", "askSpin", false);
   }
 }
 
-async function getJSON(path) { return checkJSON(path, await fetch(API + path)); }
+// fetch() rejects with an opaque TypeError when nothing is listening - "Load failed"
+// in Safari, "Failed to fetch" in Chrome - and the views showed that string verbatim,
+// burying the one thing worth saying. Every request funnels through here so a dead
+// server reads the same way everywhere.
+const OFFLINE_MSG = "Couldn't reach the API. Is uvicorn running?";
+
+async function request(path, init) {
+  let r;
+  try { r = await fetch(API + path, init); }
+  catch { throw new Error(OFFLINE_MSG); }
+  return checkJSON(path, r);
+}
+
+async function getJSON(path) { return request(path); }
 
 async function postJSON(path, data) {
-  const r = await fetch(API + path, {
+  return request(path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
   });
-  return checkJSON(path, r);
 }
 
 async function checkJSON(path, r) {
