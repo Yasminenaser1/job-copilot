@@ -10,7 +10,14 @@ If v3 ever gets signed, it gets its own contract with its own finish line.
 
 ## Ideas:
 -
-- More job feeds beyond RemoteOK (WeWorkRemotely, HN Who's Hiring, etc.) - more real openings to judge
+- ~~More job feeds beyond RemoteOK~~ SHIPPED Sep 3 as v2.1: Remotive + Arbeitnow alongside
+  RemoteOK (sources/, 14 model-free evals). Still parked: HN "Who's Hiring" - the monthly
+  thread is comments, not a job API, so it needs its own parser rather than an adapter.
+- Top Picks ranking now that the funnel is wide - noticed Sep 3: a fresh 79% match with a
+  link ranked *below* three older link-less rows, one of them the "Course Director UX/UI
+  and AI" posting the Scout itself rejects. Three slots, and stale rows are sitting in
+  them. Needs a triage rule (recency? require a link? re-judge old rows against Scout?),
+  not a bigger list.
 - "Top Picks" daily digest view - the 3 best new matches surfaced with letters attached, instead of a table
 - Smarter thresholds - only surface 70%+, auto-bury the rest
 - ~~Ask: free-text questions over the tracker~~ SHIPPED Sep 2 (ask_agent.py, 12/12 evals).

@@ -11,7 +11,7 @@ from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
 
 # The frontend compares this against its own baked-in UI_VERSION on load, so a
 # server running older code than the page announces itself instead of 404-ing.
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 
 app = FastAPI(title="Job Copilot", version=APP_VERSION)
 

@@ -80,6 +80,7 @@ python run_evals.py       # v1 matcher: scoring, consistency, input validation (
 python scout_evals.py     # Scout agent: fit judgment, keyword bait, seniority traps
 python insights_evals.py  # Insights agent: real themes found, invented ones dropped
 python ask_evals.py       # Ask: answers from the data, refusals for everything else
+python feed_evals.py      # Sources: normalization, dedupe, links, tracker migration (no model)
 ```
 
 ## Lessons learned
@@ -235,3 +236,54 @@ Ask tab in the UI.
   started without `--reload` before the route existed, so the page was newer than the
   API. `/health` now reports a version the page checks on load, because "your server is
   older than your frontend" is not something a 404 will ever tell you.
+
+## v2.1: more sources, and the link that was missing
+
+The scout used to read one board and forget where the job came from. Two changes:
+
+**It sweeps several boards.** RemoteOK, Remotive and Arbeitnow - all free, all
+key-less, none of them needing an account. Each lives in `sources/` and knows only
+its own API's field names; everything that should behave the same everywhere
+(HTML stripping, the title filter, the job shape) lives in `sources/common.py`,
+so adding a board is about twenty lines and cannot quietly disagree with the
+others about what a job is.
+
+    sources/remoteok.py  ┐
+    sources/remotive.py  ├─→ feeds.fetch_jobs() ─→ dedupe ─→ scout pipeline
+    sources/arbeitnow.py ┘        (one dead board doesn't stop the sweep)
+
+Two rules only matter once there is more than one source, and both are enforced
+in `feeds.py`: a board that is down, rate-limiting, or has renamed a field is
+reported and skipped while the others still return; and the same job cross-posted
+to two boards counts once, keyed on (company, role) and on URL, with the first
+source listed winning the link.
+
+**A match now carries its link.** `tracker.db` gained `url` and `source`
+columns (older databases migrate themselves on open, keeping every row), the scout
+records where each posting came from, and Top Picks and the pipeline table link
+straight to the posting. A 79% match you then have to go and find on Google has
+saved you nothing - which was the whole point of the tool.
+
+First real sweep: 5 postings from one board became 64 from three, 2 of them
+cross-posted and deduped, and the first run turned up a 79% match on a board that
+did not exist in v2 - with a cover letter already drafted and a link to apply.
+
+`python feeds.py` to see what a sweep finds; `python scout_run.py` to run the
+pipeline; `python feed_evals.py` for 14 model-free cases - normalization per
+board, junk rows, missing fields, the word-boundary title filter, cross-source
+dedupe, and the tracker migration. Current: 14/14.
+
+### v2.1 lessons learned
+
+- Postings arrive from public APIs, so a posting URL is untrusted input. The UI
+  renders an href only when the URL is plainly `http(s)` - a job board is not a
+  place to assume good faith about a string you are about to put in a link.
+- Dedupe is two mistakes, not one. Too loose and "Engineer (Backend)" swallows
+  "Engineer (Frontend)"; too strict and "(m/w/d)" glued onto a European job title
+  hides a duplicate. Stripping only known gender markers threads it, and both
+  directions have an eval so a future tweak can't quietly break one of them.
+- Widening the search exposed a ranking problem it didn't cause: the new 79% match
+  with a link ranked *below* three older link-less rows, including the "Course
+  Director UX/UI and AI" posting the Scout itself rejects as a writing job. Top
+  Picks shows three, and stale rows are sitting in them. Parked in v3-ideas -
+  a wider funnel needs a triage rule, not a bigger list.

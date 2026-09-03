@@ -57,6 +57,11 @@ def top_picks(limit: int = MAX_PICKS) -> list[dict]:
             "status": app["status"],
             "analyzed_on": app["analyzed_on"],
             "missing_keywords": [k.strip() for k in (app["missing_keywords"] or "").split(",") if k.strip()],
+            # The link is the point of a pick: a match you then have to go and
+            # find yourself has saved you nothing. Postings pasted in by hand
+            # have no board behind them, so this stays None for those.
+            "url": app.get("url"),
+            "source": app.get("source"),
             "letter": draft[0] if draft else None,
             "letter_path": draft[1] if draft else None,
         })
@@ -69,10 +74,12 @@ def show_picks():
         return
     print(f"\n⭐ Top {len(picks)} pick(s) still open\n")
     for p in picks:
-        print(f"{p['rank']}. {p['match_score']:>3}%  {p['role']} @ {p['company']}  (#{p['id']}, {p['status']})")
+        origin = f", via {p['source']}" if p["source"] else ""
+        print(f"{p['rank']}. {p['match_score']:>3}%  {p['role']} @ {p['company']}  (#{p['id']}, {p['status']}{origin})")
         if p["missing_keywords"]:
             print(f"      gaps: {', '.join(p['missing_keywords'])}")
         print(f"      letter: {p['letter_path'] if p['letter'] else 'not drafted yet'}")
+        print(f"      apply:  {p['url'] or 'no link stored'}")
 
 if __name__ == "__main__":
     show_picks()

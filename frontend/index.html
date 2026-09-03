@@ -161,6 +161,13 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 .pick-meta{color:var(--muted); font-size:13px; margin:0 0 12px 34px}
 .pick-body{margin-left:34px}
 .pick-body h4{font-size:12.5px; font-weight:500; color:var(--muted); margin-bottom:8px}
+.pick-apply{
+  display:inline-block; margin-top:12px; font-size:13px; font-weight:500;
+  color:var(--accent); text-decoration:none; border-bottom:1px solid transparent;
+}
+.pick-apply:hover{border-bottom-color:currentColor}
+.row-link{color:inherit; text-decoration:none; border-bottom:1px dotted var(--muted)}
+.row-link:hover{border-bottom-style:solid}
 .pick-letter{margin-top:14px}
 .pick-letter summary{
   cursor:pointer; color:var(--accent); font-size:13.5px; font-weight:600;
@@ -366,7 +373,14 @@ const API = "";
 // Bumped with APP_VERSION in api.py. A mismatch means the page and the server were
 // built from different code - usually uvicorn started before the last edit, without
 // --reload - which otherwise shows up as an unexplained 404 on a route you just added.
-const UI_VERSION = "0.5.0";
+const UI_VERSION = "0.6.0";
+
+// Posting URLs come from public job boards, i.e. from outside this machine.
+// Anything that isn't plainly http(s) never becomes an href.
+function safeUrl(u) {
+  if (!u) return null;
+  return /^https?:\/\//i.test(u) ? u : null;
+}
 
 /* ---------- theme ---------- */
 const mq = window.matchMedia("(prefers-color-scheme: light)");
@@ -512,7 +526,9 @@ async function loadPipeline() {
         <tr>
           <td>${a.id}</td>
           <td>${esc(a.company)}</td>
-          <td>${esc(a.role)}</td>
+          <td>${safeUrl(a.url)
+            ? `<a class="row-link" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.role)}</a>`
+            : esc(a.role)}</td>
           <td><span class="score-pill ${a.match_score >= 70 ? "s-high" : a.match_score >= 45 ? "s-mid" : "s-low"}">${a.match_score}</span></td>
           <td class="hint">${esc(a.missing_keywords || "")}</td>
           <td><select data-id="${a.id}">${statuses.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
@@ -552,12 +568,15 @@ async function loadPicks() {
           <span class="score-pill ${p.match_score >= 70 ? "s-high" : "s-mid"}">${p.match_score}</span>
           <span class="pick-role">${esc(p.role)}</span>
         </div>
-        <div class="pick-meta">${esc(p.company)} · #${p.id} · ${esc(p.status || "")} · ${esc(p.analyzed_on || "")}</div>
+        <div class="pick-meta">${esc(p.company)} · #${p.id} · ${esc(p.status || "")} · ${esc(p.analyzed_on || "")}${p.source ? ` · via ${esc(p.source)}` : ""}</div>
         <div class="pick-body">
           ${p.missing_keywords.length ? `<h4>Gaps to address</h4><div class="chips">${chips(p.missing_keywords, "miss")}</div>` : ""}
           ${p.letter
             ? `<details class="pick-letter"><summary>Cover letter ready</summary><pre>${esc(p.letter)}</pre></details>`
             : `<p class="hint pick-letter">No letter drafted yet — the scout writes one when it scores a posting at 65% or better.</p>`}
+          ${safeUrl(p.url)
+            ? `<a class="pick-apply" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Open the posting ↗</a>`
+            : `<p class="hint" style="margin-top:12px">No link stored — this one was pasted in by hand, or scored before links were tracked.</p>`}
         </div>
       </div>`).join("");
   } catch (e) {
