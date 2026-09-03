@@ -43,7 +43,11 @@ def top_picks(limit: int = MAX_PICKS) -> list[dict]:
         if (a["status"] or "") not in CLOSED_STATUSES
         and (a["match_score"] or 0) >= MIN_PICK_SCORE
     ]
-    open_apps.sort(key=lambda a: (-a["match_score"], a["analyzed_on"] or "", a["id"]))
+    # Two stable passes, because "newest" sorts descending while score already
+    # does: a plain (-score, date, id) key ordered dates the wrong way round and
+    # buried a freshly scouted match behind older ones tied at the same score.
+    open_apps.sort(key=lambda a: (a["analyzed_on"] or "", a["id"]), reverse=True)
+    open_apps.sort(key=lambda a: -a["match_score"])
 
     picks = []
     for rank, app in enumerate(open_apps[:limit], start=1):
