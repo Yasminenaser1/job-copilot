@@ -20,3 +20,4 @@ If v3 ever gets signed, it gets its own contract with its own finish line.
 - ~~AI insights agent~~ SHIPPED Sep 2 as skill-gap themes only (insights_agent.py, 7/7 evals).
   Still parked: outcome/funnel insights - blocked until rejection memory exists and
   enough applications are logged to have a funnel at all.
+- Real-opening verification: detect ghost/fake/stale postings (age, repost patterns, company legitimacy signals) before they enter the pipeline - parked Sep 3, arrived suspiciously at application time :)
