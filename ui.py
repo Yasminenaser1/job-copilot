@@ -1,8 +1,11 @@
 """Job Copilot UI - Streamlit frontend over the same core functions."""
+import re
+
 import streamlit as st
 from match import analyze
 from cover_letter import write_cover_letter
 from tracker import log_application, list_applications, update_status
+from archaeology_agent import read_posting
 
 st.set_page_config(page_title="Job Copilot", page_icon="💼", layout="wide")
 theme_choice = st.sidebar.radio("🎨 Theme", ["System", "Dark", "Light"], index=0)
@@ -59,7 +62,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-tab_match, tab_letter, tab_tracker = st.tabs(["📊 Match", "✍️ Cover Letter", "📋 Tracker"])
+tab_match, tab_letter, tab_tracker, tab_arch = st.tabs(
+    ["📊 Match", "✍️ Cover Letter", "📋 Tracker", "🏺 Archaeology"])
 
 with tab_match:
     col1, col2 = st.columns(2)
@@ -114,3 +118,44 @@ with tab_tracker:
             update_status(int(app_id), new_status)
             st.success(f"#{int(app_id)} → {new_status}")
             st.rerun()
+
+with tab_arch:
+    readable = [a for a in list_applications() if (a.get("description") or "").strip()]
+    if not readable:
+        st.info("No posting text stored yet - the Archaeology agent reads the full "
+                "description, so analyze or scout a posting first.")
+    else:
+        labels = {a["id"]: f"#{a['id']} — {a['role']} @ {a['company']}" for a in readable}
+        arch_id = st.selectbox("Posting", list(labels), format_func=lambda i: labels[i])
+        row = next(a for a in readable if a["id"] == arch_id)
+        cache_key = f"arch_{arch_id}"
+
+        # ~20s of local inference per posting, so it runs once and the reading is kept
+        # in session state - switching tabs or clicking elsewhere re-renders, never re-reads.
+        if st.button("Read this posting", type="primary") and cache_key not in st.session_state:
+            with st.spinner("Reading between the lines..."):
+                st.session_state[cache_key] = read_posting(
+                    row["description"], row["role"], row["company"])
+
+        reading = st.session_state.get(cache_key)
+        if reading:
+            for f in reading.findings:
+                with st.container(border=True):
+                    st.subheader(f.hypothesis.replace("_", " ").title())
+                    st.progress(f.confidence, text=f"confidence {f.confidence}")
+                    for phrase in f.evidence_phrases:
+                        st.markdown(f"> {phrase}")
+                    st.caption(f.implication)
+            if not reading.findings:
+                st.success("Nothing the posting will admit to - most postings are unremarkable.")
+            if reading.overall:
+                st.write(reading.overall)
+
+            with st.expander("Full posting text"):
+                phrases = [p for f in reading.findings for p in f.evidence_phrases]
+                highlighted = row["description"]
+                for phrase in sorted(phrases, key=len, reverse=True):
+                    pattern = r"\s+".join(re.escape(w) for w in phrase.split())
+                    highlighted = re.sub(pattern, lambda m: f"**:orange[{m.group(0)}]**",
+                                         highlighted, flags=re.IGNORECASE)
+                st.markdown(highlighted)

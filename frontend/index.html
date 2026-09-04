@@ -198,6 +198,38 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 .answer.refused{border-left-color:var(--warn)}
 .answer p{font-size:15px; line-height:1.6}
 .answer .hint{margin-top:10px}
+.dig{
+  margin-top:14px; padding:18px 20px; border-radius:var(--radius);
+  background:var(--surface); border:1px solid var(--line);
+}
+.dig-top{display:flex; align-items:baseline; gap:12px; margin-bottom:10px}
+.dig-hyp{font-family:"Space Grotesk"; font-weight:600; font-size:16px}
+.dig-conf{color:var(--muted); font-size:12.5px; margin-left:auto}
+.conf-bar{height:6px; border-radius:999px; background:var(--surface-2); overflow:hidden}
+.conf-fill{height:100%; border-radius:999px; background:var(--accent); transition:width .6s ease}
+.dig blockquote{
+  margin:12px 0 0 0; padding:8px 14px; font-size:14px; color:var(--accent-soft);
+  border-left:2px solid var(--accent); background:rgba(139,124,255,.05);
+}
+.dig-imp{margin-top:14px; font-size:14px}
+.dig-overall{
+  margin-top:18px; padding:14px 16px; border-radius:var(--radius);
+  background:var(--surface); border-left:3px solid var(--accent); color:var(--accent-soft);
+}
+.dig-source{margin-top:18px}
+.dig-source summary{
+  cursor:pointer; color:var(--accent); font-size:13.5px; font-weight:600;
+  list-style:none; width:fit-content;
+}
+.dig-source summary::-webkit-details-marker{display:none}
+.dig-source summary::before{content:"\25B8  "}
+.dig-source[open] summary::before{content:"\25BE  "}
+.dig-source pre{
+  margin-top:10px; padding:14px 16px; border-radius:10px; white-space:pre-wrap;
+  background:var(--surface-2); border:1px solid var(--line);
+  font:inherit; font-size:14px; line-height:1.6; max-height:460px; overflow-y:auto;
+}
+.dig-source mark{background:rgba(139,124,255,.28); color:var(--ink); border-radius:3px; padding:1px 2px}
 .spinner{
   display:none; width:16px; height:16px; border-radius:50%;
   border:2px solid var(--line); border-top-color:var(--accent);
@@ -229,6 +261,7 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <button data-view="picks">Top Picks</button>
       <button data-view="pipeline">Pipeline</button>
       <button data-view="insights">Insights</button>
+      <button data-view="archaeology">Archaeology</button>
       <button data-view="ask">Ask</button>
     </nav>
     <div class="status">
@@ -347,6 +380,22 @@ td select{width:auto; padding:6px 10px; font-size:13px}
       <div id="insightsBody" style="margin-top:18px"></div>
     </section>
 
+    <section class="view" id="view-archaeology">
+      <h1>Archaeology</h1>
+      <p class="sub">What one posting accidentally says about the team that wrote it &mdash; a backfill, a role already promised, a team covering for people it hasn't replaced. Every hypothesis has to quote the posting, and none of them can ever be confirmed, so read them as questions to ask in the interview.</p>
+      <div class="field">
+        <label for="archPick">Posting</label>
+        <select id="archPick"><option>Loading…</option></select>
+      </div>
+      <div class="actions">
+        <button class="btn" id="archBtn">Read this posting</button>
+        <div class="spinner" id="archSpin"></div>
+        <span class="hint" id="archHint">Only postings with stored text can be read; this takes ~20 seconds on the local model.</span>
+      </div>
+      <div class="error" id="archError"></div>
+      <div id="archBody" style="margin-top:18px"></div>
+    </section>
+
     <section class="view" id="view-ask">
       <h1>Ask</h1>
       <p class="sub">Ask anything about your own pipeline in plain English. The local model reads only your tracked postings &mdash; it never writes to them, and it refuses rather than guesses when your tracker doesn't hold the answer.</p>
@@ -373,7 +422,7 @@ const API = "";
 // Bumped with APP_VERSION in api.py. A mismatch means the page and the server were
 // built from different code - usually uvicorn started before the last edit, without
 // --reload - which otherwise shows up as an unexplained 404 on a route you just added.
-const UI_VERSION = "0.6.0";
+const UI_VERSION = "0.7.0";
 
 // Posting URLs come from public job boards, i.e. from outside this machine.
 // Anything that isn't plainly http(s) never becomes an href.
@@ -408,6 +457,7 @@ document.querySelectorAll(".nav button").forEach(btn => {
     $("view-" + btn.dataset.view).classList.add("active");
     if (btn.dataset.view === "pipeline") loadPipeline();
     if (btn.dataset.view === "picks") loadPicks();
+    if (btn.dataset.view === "archaeology") loadArchOptions();
   });
 });
 
@@ -614,6 +664,105 @@ async function loadInsights() {
   }
 }
 
+$("archBtn").addEventListener("click", readPosting);
+
+// The idle hint doubles as the progress line while a read runs, so it's captured
+// once here rather than written out twice.
+const ARCH_HINT = $("archHint").textContent;
+
+async function loadArchOptions() {
+  const sel = $("archPick");
+  hide("archError");
+  try {
+    const apps = await getJSON("/applications");
+    // Rows scored before descriptions were stored have nothing to read, so they
+    // never reach the dropdown - the agent would 400 on every one of them.
+    const readable = apps.filter(a => a.description);
+    if (!readable.length) {
+      sel.innerHTML = "<option>No posting with stored text</option>";
+      sel.disabled = true; $("archBtn").disabled = true;
+      $("archBody").innerHTML = '<div class="empty">Nothing to read yet. Postings scored before the tracker stored descriptions have no text behind them — analyze or scout one and it shows up here.</div>';
+      return;
+    }
+    sel.disabled = false; $("archBtn").disabled = false;
+    sel.innerHTML = readable.map(a =>
+      `<option value="${a.id}">#${a.id} — ${esc(a.role)} @ ${esc(a.company)}</option>`).join("");
+  } catch (e) {
+    sel.innerHTML = "<option>Unavailable</option>";
+    sel.disabled = true; $("archBtn").disabled = true;
+    showError("archError", e.message || OFFLINE_MSG);
+  }
+}
+
+async function readPosting() {
+  const id = Number($("archPick").value);
+  if (!id) return;
+  const body = $("archBody");
+  hide("archError");
+  body.innerHTML = "";
+  busy("archBtn", "archSpin", true);
+  // ~20 seconds of local inference with nothing streaming back: without a line
+  // saying so, a disabled button is indistinguishable from a hung page.
+  $("archHint").textContent = "Reading the posting — the local model takes ~20 seconds.";
+  try {
+    renderReading(await postJSON("/archaeology", { application_id: id }));
+  } catch (e) {
+    showError("archError", e.message || OFFLINE_MSG);
+  } finally {
+    busy("archBtn", "archSpin", false);
+    $("archHint").textContent = ARCH_HINT;
+  }
+}
+
+function renderReading(data) {
+  const r = data.reading;
+  const phrases = r.findings.flatMap(f => f.evidence_phrases || []);
+  const cards = r.findings.length
+    ? r.findings.map(f => {
+        const pct = Math.round(Math.max(0, Math.min(1, f.confidence)) * 100);
+        return `
+      <div class="dig">
+        <div class="dig-top">
+          <span class="dig-hyp">${esc(titleCase(f.hypothesis))}</span>
+          <span class="dig-conf">confidence ${f.confidence}</span>
+        </div>
+        <div class="conf-bar"><div class="conf-fill" style="width:${pct}%"></div></div>
+        ${(f.evidence_phrases || []).map(q => `<blockquote>${esc(q)}</blockquote>`).join("")}
+        <p class="dig-imp">${esc(f.implication)}</p>
+      </div>`;
+      }).join("")
+    : '<div class="empty">Nothing this posting will admit to. Most postings are unremarkable, and this one revealed nothing it could be quoted on.</div>';
+  $("archBody").innerHTML =
+    `<p class="hint">${esc(data.role)} @ ${esc(data.company)} · #${data.application_id}</p>` +
+    cards +
+    (r.overall ? `<div class="dig-overall">${esc(r.overall)}</div>` : "") +
+    `<details class="dig-source"><summary>Full posting, evidence highlighted</summary>` +
+    `<pre>${highlightEvidence(data.description, phrases)}</pre></details>`;
+}
+
+function titleCase(s) {
+  return String(s ?? "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Mark the evidence inside the posting itself. The description is escaped FIRST and
+// the phrases are escaped the same way, so the patterns match the escaped text and
+// the only markup that ever reaches innerHTML is the <mark> added here. Matching is
+// case-insensitive and tolerates any whitespace between words, because scraped
+// postings wrap mid-phrase and the agent quotes them re-flowed onto one line.
+function highlightEvidence(description, phrases) {
+  const safe = esc(description);
+  const patterns = [...new Set(phrases)]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)   // longest first, so a phrase containing another wins
+    .map(q => esc(q).trim().split(/\s+/).map(escRegex).join("\\s+"))
+    .filter(Boolean);
+  if (!patterns.length) return safe;
+  // One pass over the escaped text: a replacement is never rescanned, so the <mark>
+  // tags this inserts can't be matched or nested by a later phrase.
+  return safe.replace(new RegExp("(" + patterns.join("|") + ")", "gi"), "<mark>$1</mark>");
+}
+function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
 $("askForm").addEventListener("submit", (e) => { e.preventDefault(); askQuestion(); });
 document.querySelectorAll("#askSuggest button").forEach(b =>
   b.addEventListener("click", () => { $("askInput").value = b.textContent; askQuestion(); }));
@@ -663,11 +812,16 @@ async function postJSON(path, data) {
 
 async function checkJSON(path, r) {
   if (!r.ok) {
-    let msg = "Request failed (" + r.status + ")";
-    try { msg = (await r.json()).detail || msg; } catch {}
+    let msg = "Request failed (" + r.status + ")", detail = null;
+    try { detail = (await r.json()).detail; } catch {}
+    if (detail) msg = detail;
     // A 404 on a route the page knows about means the server is older than this
     // page - almost always uvicorn started without --reload before the route existed.
-    if (r.status === 404) msg = "The API has no " + path + " route. Restart uvicorn (with --reload) - it's running an older build of api.py.";
+    // "Not Found" is FastAPI's own no-such-route body; a route that 404s a missing
+    // row sends its own detail, and that one is about the row, not the server.
+    if (r.status === 404 && (!detail || detail === "Not Found")) {
+      msg = "The API has no " + path + " route. Restart uvicorn (with --reload) - it's running an older build of api.py.";
+    }
     throw new Error(msg);
   }
   return r.json();

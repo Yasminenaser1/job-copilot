@@ -8,10 +8,11 @@ from gaps import keyword_rows
 from insights_agent import find_gap_themes
 from ask_agent import ask, MAX_QUESTION_CHARS
 from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
+from archaeology_agent import read_posting
 
 # The frontend compares this against its own baked-in UI_VERSION on load, so a
 # server running older code than the page announces itself instead of 404-ing.
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 app = FastAPI(title="Job Copilot", version=APP_VERSION)
 
@@ -36,6 +37,9 @@ class StatusUpdate(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
+
+class ArchaeologyRequest(BaseModel):
+    application_id: int
 
 @app.get("/health")
 def health():
@@ -67,6 +71,39 @@ def insights():
     return {
         "postings_analyzed": len(rows),
         "themes": [t.model_dump() for t in themes],
+    }
+
+@app.post("/archaeology")
+def archaeology(request: ArchaeologyRequest):
+    """Read what one tracked posting reveals about the team that wrote it.
+
+    Read-only: it looks the row up and never writes, so re-reading a posting can
+    never change the pipeline. Rows logged before descriptions were stored have
+    nothing to read, and say so rather than returning an empty reading.
+
+    The description comes back with the reading so the caller can show the evidence
+    phrases in place, without a second request for text the lookup already had.
+    """
+    row = next((a for a in list_applications() if a["id"] == request.application_id), None)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No application #{request.application_id}")
+    description = row.get("description")
+    if not description:
+        raise HTTPException(
+            status_code=400,
+            detail=("That posting predates description storage - there is no text to read. "
+                    "Re-ingest it to store the description."),
+        )
+    try:
+        reading = read_posting(description, row["role"], row["company"])
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Archaeology agent unavailable: {e}")
+    return {
+        "application_id": row["id"],
+        "company": row["company"],
+        "role": row["role"],
+        "description": description,
+        "reading": reading.model_dump(),
     }
 
 @app.post("/ask")
