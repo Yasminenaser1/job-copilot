@@ -9,14 +9,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0C0A1A; --surface:#15122B; --surface-2:#1D1940; --line:#2A2454;
-  --ink:#EDEBFA; --muted:#9A93C4; --accent:#8B7CFF; --accent-soft:#C3B8FF;
-  --good:#5EE0A0; --warn:#FFC46B; --bad:#FF7A8A;
+  --bg:#0D0F12; --surface:#15181D; --surface-2:#1E222A; --line:#2B313B;
+  --ink:#E8ECF2; --muted:#8A93A3; --accent:#C5CEDB; --accent-soft:#E2E8F0;
+  --good:#6FD9A4; --warn:#E8A33D; --bad:#F0788A;
+  --on-accent:#12161C; --accent-ink:var(--accent);
   --radius:14px;
 }
 [data-theme="light"]{
-  --bg:#F7F6FC; --surface:#FFFFFF; --surface-2:#EDEAFB; --line:#DDD8F0;
-  --ink:#221E3F; --muted:#6C668F; --accent:#6A58E8; --accent-soft:#4A3FBF;
+  --bg:#FAF8F3; --surface:#FFFFFF; --surface-2:#F2EDE2; --line:#E3DACA;
+  --ink:#1F1B14; --muted:#7A7060; --accent:#A67C1A; --accent-soft:#C89B32;
+  --good:#2B744D; --warn:#A2510D; --bad:#BA372A;
+  --on-accent:#140F05; --accent-ink:#856214;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{color-scheme:dark}
@@ -25,22 +28,11 @@ html[data-theme="light"]{color-scheme:light}
   border-radius:10px; padding:4px; width:fit-content}
 .theme-toggle button{all:unset; cursor:pointer; font-size:12px; padding:5px 10px;
   border-radius:7px; color:var(--muted)}
-.theme-toggle button.active{background:var(--accent); color:#fff}
-[data-theme="light"] body::before{
-  background:
-    radial-gradient(700px 340px at 85% -10%, rgba(106,88,232,.10), transparent 60%),
-    radial-gradient(520px 300px at -10% 100%, rgba(106,88,232,.05), transparent 60%);
-}
+.theme-toggle button.active{background:var(--accent); color:var(--on-accent)}
 body{
   background:var(--bg); color:var(--ink);
   font-family:Inter,system-ui,-apple-system,sans-serif;
   font-size:15px; line-height:1.55; min-height:100vh;
-}
-body::before{
-  content:""; position:fixed; inset:0; pointer-events:none;
-  background:
-    radial-gradient(700px 340px at 85% -10%, rgba(139,124,255,.16), transparent 60%),
-    radial-gradient(520px 300px at -10% 100%, rgba(139,124,255,.08), transparent 60%);
 }
 .app{position:relative; display:grid; grid-template-columns:220px 1fr; min-height:100vh}
 .rail{
@@ -48,7 +40,26 @@ body::before{
   display:flex; flex-direction:column; gap:28px;
 }
 .wordmark{font-family:"Space Grotesk"; font-weight:700; font-size:20px; letter-spacing:-.02em}
-.wordmark span{color:var(--accent)}
+.wordmark span{
+  background:linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 55%, var(--accent-soft) 100%);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent;
+}
+@supports not ((background-clip:text) or (-webkit-background-clip:text)){
+  .wordmark span{color:var(--accent-ink); background:none}
+}
+/* One sweep on load. The 5-stop gradient at 200% width is built so the
+   resting frame (position 0) is identical to the static 3-stop one above. */
+@media (prefers-reduced-motion:no-preference){
+  .wordmark span{
+    background-image:linear-gradient(135deg,
+      var(--accent-soft) 0%, var(--accent) 27.5%, var(--accent-soft) 50%,
+      var(--accent) 77.5%, var(--accent-soft) 100%);
+    background-size:200% 100%;
+    animation:wordmark-sheen 1.2s ease-out 1 forwards;
+  }
+  @keyframes wordmark-sheen{ from{background-position:100% 0} to{background-position:0 0} }
+}
 .tagline{color:var(--muted); font-size:12.5px; margin-top:6px}
 .nav{display:flex; flex-direction:column; gap:6px}
 .nav button{
@@ -83,25 +94,34 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--accen
 .actions{display:flex; align-items:center; gap:14px; margin-top:6px}
 .btn{
   font:inherit; font-weight:600; cursor:pointer; border:none; border-radius:10px;
-  padding:11px 22px; background:var(--accent); color:#100D24;
+  padding:11px 22px; color:var(--on-accent);
+  background:linear-gradient(180deg, var(--accent-soft), var(--accent));
+  box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent);
   transition:transform .12s, filter .15s;
 }
 .btn:hover{filter:brightness(1.08)}
 .btn:active{transform:scale(.98)}
 .btn:disabled{opacity:.55; cursor:wait}
-.btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--line)}
+.btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--line); box-shadow:none}
 .hint{color:var(--muted); font-size:13px}
 .error{
   display:none; margin-top:14px; padding:12px 14px; border-radius:10px;
-  background:rgba(255,122,138,.09); border:1px solid rgba(255,122,138,.35); color:#FFB9C2; font-size:14px;
+  background:color-mix(in srgb, var(--bad) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--bad) 35%, transparent);
+  color:var(--bad); font-size:14px;
 }
 .report{display:none; margin-top:30px; border-top:1px solid var(--line); padding-top:26px}
 .report-grid{display:grid; grid-template-columns:200px 1fr; gap:30px; align-items:start}
 .gauge-wrap{text-align:center}
 .gauge{width:170px; height:170px}
 .gauge .track{stroke:var(--surface-2)}
-.gauge .fill{stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+.gauge .fill{stroke:url(#gaugeSheen); stroke-linecap:round; transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+/* --gauge-hue is set on the <svg> at render time to the verdict colour
+   (good/warn/bad); it falls back to --accent before the first report. */
+#gaugeSheen .mid{stop-color:var(--gauge-hue, var(--accent))}
+#gaugeSheen .edge{stop-color:color-mix(in srgb, var(--gauge-hue, var(--accent)) 74%, #fff)}
 .gauge text{fill:var(--ink); font-family:"Space Grotesk"; font-weight:700}
+.gauge .unit{fill:var(--muted)}
 .gauge .pct{font-size:34px}
 .gauge-label{color:var(--muted); font-size:13px; margin-top:8px}
 .cols{display:grid; grid-template-columns:1fr 1fr; gap:22px}
@@ -111,11 +131,11 @@ input:focus, textarea:focus, select:focus{outline:none; border-color:var(--accen
   font-size:13px; padding:5px 11px; border-radius:999px;
   background:var(--surface-2); border:1px solid var(--line);
 }
-.chip.have{border-color:rgba(94,224,160,.4); color:var(--good)}
-.chip.miss{border-color:rgba(255,196,107,.4); color:var(--warn)}
+.chip.have{border-color:color-mix(in srgb, var(--good) 40%, transparent); color:var(--good)}
+.chip.miss{border-color:color-mix(in srgb, var(--warn) 40%, transparent); color:var(--warn)}
 .verdict{
   margin-top:20px; padding:14px 16px; border-radius:var(--radius);
-  background:var(--surface); border-left:3px solid var(--accent); color:var(--accent-soft);
+  background:var(--surface); border-left:3px solid var(--accent); color:var(--ink);
 }
 .emphasize{margin-top:14px; color:var(--muted); font-size:14px}
 .emphasize b{color:var(--ink); font-weight:600}
@@ -129,21 +149,21 @@ th{
   padding:10px 12px; border-bottom:1px solid var(--line);
 }
 td{padding:12px; border-bottom:1px solid var(--line); font-size:14px; vertical-align:middle}
-tr:hover td{background:rgba(139,124,255,.04)}
+tr:hover td{background:color-mix(in srgb, var(--accent) 4%, transparent)}
 .score-pill{
   display:inline-block; min-width:46px; text-align:center; font-weight:600;
   font-family:"Space Grotesk"; padding:3px 10px; border-radius:999px; font-size:13.5px;
 }
-.s-high{background:rgba(94,224,160,.12); color:var(--good)}
-.s-mid{background:rgba(255,196,107,.12); color:var(--warn)}
-.s-low{background:rgba(255,122,138,.12); color:var(--bad)}
+.s-high{background:color-mix(in srgb, var(--good) 12%, transparent); color:var(--good)}
+.s-mid{background:color-mix(in srgb, var(--warn) 12%, transparent); color:var(--warn)}
+.s-low{background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad)}
 td select{width:auto; padding:6px 10px; font-size:13px}
 .mini-btn{
   font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
   border:1px solid var(--accent); border-radius:8px; padding:5px 10px;
-  background:transparent; color:var(--accent); transition:background .15s, color .15s;
+  background:transparent; color:var(--accent-ink); transition:background .15s, color .15s;
 }
-.mini-btn:hover{background:var(--accent); color:#fff}
+.mini-btn:hover{background:var(--accent); color:var(--on-accent)}
 .empty{
   margin-top:20px; padding:34px; text-align:center; color:var(--muted);
   border:1px dashed var(--line); border-radius:var(--radius);
@@ -163,14 +183,14 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 .pick-body h4{font-size:12.5px; font-weight:500; color:var(--muted); margin-bottom:8px}
 .pick-apply{
   display:inline-block; margin-top:12px; font-size:13px; font-weight:500;
-  color:var(--accent); text-decoration:none; border-bottom:1px solid transparent;
+  color:var(--accent-ink); text-decoration:none; border-bottom:1px solid transparent;
 }
 .pick-apply:hover{border-bottom-color:currentColor}
 .row-link{color:inherit; text-decoration:none; border-bottom:1px dotted var(--muted)}
 .row-link:hover{border-bottom-style:solid}
 .pick-letter{margin-top:14px}
 .pick-letter summary{
-  cursor:pointer; color:var(--accent); font-size:13.5px; font-weight:600;
+  cursor:pointer; color:var(--accent-ink); font-size:13.5px; font-weight:600;
   list-style:none; width:fit-content;
 }
 .pick-letter summary::-webkit-details-marker{display:none}
@@ -198,38 +218,50 @@ td select{width:auto; padding:6px 10px; font-size:13px}
 .answer.refused{border-left-color:var(--warn)}
 .answer p{font-size:15px; line-height:1.6}
 .answer .hint{margin-top:10px}
-.dig{
-  margin-top:14px; padding:18px 20px; border-radius:var(--radius);
-  background:var(--surface); border:1px solid var(--line);
+/* Archaeology reads as an annotated document: the posting is the text, each
+   finding is a margin note tied to the phrase it was drawn from. */
+.arch-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:20px}
+.arch-role{font-family:"Space Grotesk"; font-weight:600; font-size:16px}
+.arch-org{color:var(--muted); font-size:14px}
+.arch-id{color:var(--muted); font-size:12.5px; margin-left:auto}
+.arch-nothing{color:var(--muted); font-size:13.5px; margin-bottom:14px; max-width:65ch}
+.arch-region{position:relative; display:grid; grid-template-columns:minmax(0,65ch) 280px; gap:34px; align-items:start}
+.arch-doc{min-width:0}
+.arch-doc pre{
+  max-width:65ch; white-space:pre-wrap; font:inherit; font-size:14.5px; line-height:1.75;
 }
-.dig-top{display:flex; align-items:baseline; gap:12px; margin-bottom:10px}
-.dig-hyp{font-family:"Space Grotesk"; font-weight:600; font-size:16px}
-.dig-conf{color:var(--muted); font-size:12.5px; margin-left:auto}
-.conf-bar{height:6px; border-radius:999px; background:var(--surface-2); overflow:hidden}
-.conf-fill{height:100%; border-radius:999px; background:var(--accent); transition:width .6s ease}
-.dig blockquote{
-  margin:12px 0 0 0; padding:8px 14px; font-size:14px; color:var(--accent-soft);
-  border-left:2px solid var(--accent); background:rgba(139,124,255,.05);
+.arch-doc mark{
+  background:color-mix(in srgb, var(--accent) 14%, transparent); color:inherit; border-radius:0; padding:0;
+  border-bottom:1px solid var(--accent); transition:background .15s;
 }
-.dig-imp{margin-top:14px; font-size:14px}
-.dig-overall{
-  margin-top:18px; padding:14px 16px; border-radius:var(--radius);
-  background:var(--surface); border-left:3px solid var(--accent); color:var(--accent-soft);
+.arch-doc mark.is-lit{background:color-mix(in srgb, var(--accent) 30%, transparent)}
+.arch-doc mark:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.arch-note{
+  position:absolute; right:0; top:0; width:280px;
+  padding:2px 0 3px 12px; border:none; border-left:2px solid var(--accent);
+  background:transparent; transition:background .15s;
 }
-.dig-source{margin-top:18px}
-.dig-source summary{
-  cursor:pointer; color:var(--accent); font-size:13.5px; font-weight:600;
-  list-style:none; width:fit-content;
+.arch-note.is-lit{background:color-mix(in srgb, var(--accent) 7%, transparent)}
+.arch-note:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+.arch-note-hyp{font-family:"Space Grotesk"; font-weight:600; font-size:13.5px; line-height:1.35}
+.arch-conf{height:3px; margin:7px 0; background:var(--surface-2); overflow:hidden}
+.arch-conf i{display:block; height:100%; background:var(--accent); transition:width .6s ease}
+.arch-note-imp{font-size:12.5px; line-height:1.5; color:var(--muted)}
+.arch-overall{
+  max-width:65ch; margin-top:28px; padding-top:16px;
+  border-top:1px solid var(--line); font-size:14px; color:var(--ink);
 }
-.dig-source summary::-webkit-details-marker{display:none}
-.dig-source summary::before{content:"\25B8  "}
-.dig-source[open] summary::before{content:"\25BE  "}
-.dig-source pre{
-  margin-top:10px; padding:14px 16px; border-radius:10px; white-space:pre-wrap;
-  background:var(--surface-2); border:1px solid var(--line);
-  font:inherit; font-size:14px; line-height:1.6; max-height:460px; overflow-y:auto;
+@media (max-width:900px){
+  /* No room for a margin: the notes fall in after the posting and each mark
+     becomes a link down to its own note. */
+  .arch-region{display:block; min-height:0 !important}
+  .arch-margin{margin-top:26px}
+  .arch-note{position:static; width:auto; margin-top:16px}
+  .arch-doc mark{cursor:pointer}
 }
-.dig-source mark{background:rgba(139,124,255,.28); color:var(--ink); border-radius:3px; padding:1px 2px}
+@media (prefers-reduced-motion:reduce){
+  .arch-conf i, .arch-note, .arch-doc mark{transition:none}
+}
 .spinner{
   display:none; width:16px; height:16px; border-radius:50%;
   border:2px solid var(--line); border-top-color:var(--accent);
@@ -298,11 +330,18 @@ td select{width:auto; padding:6px 10px; font-size:13px}
         <div class="report-grid">
           <div class="gauge-wrap">
             <svg class="gauge" viewBox="0 0 120 120" role="img" aria-label="Match score">
+              <defs>
+                <linearGradient id="gaugeSheen" x1="0" y1="0" x2="1" y2="1">
+                  <stop class="edge" offset="0"/>
+                  <stop class="mid" offset=".55"/>
+                  <stop class="edge" offset="1"/>
+                </linearGradient>
+              </defs>
               <circle class="track" cx="60" cy="60" r="52" fill="none" stroke-width="10"/>
               <circle class="fill" id="gaugeFill" cx="60" cy="60" r="52" fill="none" stroke-width="10"
                       stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 60 60)"/>
               <text class="pct" x="60" y="66" text-anchor="middle" id="gaugePct">0</text>
-              <text x="60" y="84" text-anchor="middle" font-size="11" fill="#9A93C4">match</text>
+              <text class="unit" x="60" y="84" text-anchor="middle" font-size="11">match</text>
             </svg>
             <div class="gauge-label" id="gaugeVerdictShort"></div>
           </div>
@@ -510,7 +549,10 @@ function renderReport(rep, appId, company) {
   const C = 326.7;
   const fill = $("gaugeFill");
   const color = score >= 70 ? "var(--good)" : score >= 45 ? "var(--warn)" : "var(--bad)";
-  fill.style.stroke = color;
+  // Drive the sheen gradient's stops rather than the stroke itself, so the arc
+  // keeps its verdict colour and picks up the highlight. Custom properties
+  // inherit, so this has to land on the <svg> that also holds the <defs>.
+  fill.closest("svg").style.setProperty("--gauge-hue", color);
   requestAnimationFrame(() => { fill.style.strokeDashoffset = C - (C * score / 100); });
   animateNumber($("gaugePct"), score);
   $("gaugeVerdictShort").textContent = score >= 70 ? "Strong fit" : score >= 45 ? "Partial fit" : "Weak fit";
@@ -716,32 +758,132 @@ async function readPosting() {
 
 function renderReading(data) {
   const r = data.reading;
-  const phrases = r.findings.flatMap(f => f.evidence_phrases || []);
-  const cards = r.findings.length
-    ? r.findings.map(f => {
-        const pct = Math.round(Math.max(0, Math.min(1, f.confidence)) * 100);
-        return `
-      <div class="dig">
-        <div class="dig-top">
-          <span class="dig-hyp">${esc(titleCase(f.hypothesis))}</span>
-          <span class="dig-conf">confidence ${f.confidence}</span>
-        </div>
-        <div class="conf-bar"><div class="conf-fill" style="width:${pct}%"></div></div>
-        ${(f.evidence_phrases || []).map(q => `<blockquote>${esc(q)}</blockquote>`).join("")}
-        <p class="dig-imp">${esc(f.implication)}</p>
-      </div>`;
-      }).join("")
-    : '<div class="empty">Nothing this posting will admit to. Most postings are unremarkable, and this one revealed nothing it could be quoted on.</div>';
-  $("archBody").innerHTML =
-    `<p class="hint">${esc(data.role)} @ ${esc(data.company)} · #${data.application_id}</p>` +
-    cards +
-    (r.overall ? `<div class="dig-overall">${esc(r.overall)}</div>` : "") +
-    `<details class="dig-source"><summary>Full posting, evidence highlighted</summary>` +
-    `<pre>${highlightEvidence(data.description, phrases)}</pre></details>`;
+  const findings = r.findings || [];
+  const { html, anchors } = highlightEvidence(data.description, findings);
+  const head =
+    `<header class="arch-head">` +
+      `<span class="arch-role">${esc(data.role)}</span>` +
+      `<span class="arch-org">${esc(data.company)}</span>` +
+      `<span class="arch-id">#${esc(String(data.application_id))}</span>` +
+    `</header>`;
+  const doc = `<div class="arch-doc" id="archDoc"><pre>${html}</pre></div>`;
+  const overall = r.overall ? `<p class="arch-overall">${esc(r.overall)}</p>` : "";
+
+  if (!findings.length) {
+    teardownArchLayout();
+    $("archBody").innerHTML = head +
+      `<p class="arch-nothing">Nothing stood out. Most postings are unremarkable, and this one` +
+      ` revealed nothing it could be quoted on — the text is below, unannotated.</p>` +
+      doc + overall;
+    return;
+  }
+
+  const notes = findings.map((f, i) => {
+    const pct = Math.round(Math.max(0, Math.min(1, f.confidence)) * 100);
+    const anchor = anchors[i] ? ` data-anchor="${anchors[i]}"` : "";
+    return `<aside class="arch-note" id="arch-note-${i}" data-finding="${i}"${anchor} tabindex="0">` +
+        `<div class="arch-note-hyp">${esc(titleCase(f.hypothesis))}</div>` +
+        `<div class="arch-conf" role="img" aria-label="confidence ${esc(String(f.confidence))}">` +
+          `<i style="width:${pct}%"></i></div>` +
+        `<p class="arch-note-imp">${esc(f.implication)}</p>` +
+      `</aside>`;
+  }).join("");
+
+  $("archBody").innerHTML = head +
+    `<div class="arch-region" id="archRegion">${doc}<div class="arch-margin">${notes}</div></div>` +
+    overall;
+  setupArchLayout();
 }
 
 function titleCase(s) {
   return String(s ?? "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+const archStacked = () => window.matchMedia("(max-width:900px)").matches;
+let archResizeObserver = null;
+
+function teardownArchLayout() {
+  if (archResizeObserver) { archResizeObserver.disconnect(); archResizeObserver = null; }
+}
+
+function setupArchLayout() {
+  teardownArchLayout();
+  layoutArchNotes();
+  const doc = $("archDoc");
+  if (doc && window.ResizeObserver) {
+    archResizeObserver = new ResizeObserver(layoutArchNotes);
+    archResizeObserver.observe(doc);
+  }
+  // The web fonts usually land after the first paint, and every mark moves when
+  // they do — without this second pass the notes stay pinned to stale offsets.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutArchNotes);
+}
+
+// Put each note beside the phrase it came from, then push down any note that
+// would land on the one above it. Marks and notes share the region as their
+// offset parent, so offsetTop is already in the same coordinate space.
+function layoutArchNotes() {
+  const region = $("archRegion"), doc = $("archDoc");
+  if (!region || !doc) return;
+  const notes = [...region.querySelectorAll(".arch-note")];
+  const stacked = archStacked();
+
+  notes.forEach(n => {
+    n.style.top = "";
+    region.querySelectorAll(`mark[data-finding="${n.dataset.finding}"]`).forEach(m => {
+      if (stacked) { m.setAttribute("tabindex", "0"); m.setAttribute("role", "link"); }
+      else { m.removeAttribute("tabindex"); m.removeAttribute("role"); }
+    });
+  });
+  if (stacked) { region.style.minHeight = ""; return; }
+
+  const placed = notes
+    .map(n => {
+      const mark = n.dataset.anchor ? document.getElementById(n.dataset.anchor) : null;
+      return { note: n, at: mark ? mark.offsetTop : null };
+    })
+    // Findings arrive by confidence, not by where they appear; the walk has to
+    // go down the page. A finding whose phrases never matched sorts to the end.
+    .sort((a, b) => (a.at ?? Number.MAX_SAFE_INTEGER) - (b.at ?? Number.MAX_SAFE_INTEGER));
+
+  let prevBottom = -Infinity;
+  for (const p of placed) {
+    const floor = prevBottom === -Infinity ? 0 : prevBottom + 12;
+    const y = Math.max(p.at ?? floor, floor);
+    p.note.style.top = y + "px";
+    prevBottom = y + p.note.offsetHeight;
+  }
+  // The notes are out of flow, so the region has to be told how tall they made it.
+  region.style.minHeight = Math.max(doc.offsetHeight, prevBottom) + "px";
+}
+
+// Hovering or focusing either half of a pairing lights up the other.
+function archLight(target, on, related) {
+  const el = target && target.closest ? target.closest("[data-finding]") : null;
+  if (!el || (related && el.contains(related))) return;
+  $("archBody").querySelectorAll(`[data-finding="${el.dataset.finding}"]`)
+    .forEach(n => n.classList.toggle("is-lit", on));
+}
+$("archBody").addEventListener("mouseover", e => archLight(e.target, true, e.relatedTarget));
+$("archBody").addEventListener("mouseout", e => archLight(e.target, false, e.relatedTarget));
+$("archBody").addEventListener("focusin", e => archLight(e.target, true));
+$("archBody").addEventListener("focusout", e => archLight(e.target, false));
+$("archBody").addEventListener("click", e => archJumpToNote(e.target));
+$("archBody").addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") {
+    if (archJumpToNote(e.target)) e.preventDefault();
+  }
+});
+
+function archJumpToNote(target) {
+  const mark = target && target.closest ? target.closest("mark[data-finding]") : null;
+  if (!mark || !archStacked()) return false;
+  const note = $("arch-note-" + mark.dataset.finding);
+  if (!note) return false;
+  const still = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  note.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+  note.focus({ preventScroll: true });
+  return true;
 }
 
 // Mark the evidence inside the posting itself. The description is escaped FIRST and
@@ -749,17 +891,36 @@ function titleCase(s) {
 // the only markup that ever reaches innerHTML is the <mark> added here. Matching is
 // case-insensitive and tolerates any whitespace between words, because scraped
 // postings wrap mid-phrase and the agent quotes them re-flowed onto one line.
-function highlightEvidence(description, phrases) {
+// Returns the marked-up text plus, per finding, the id of its first mark — the
+// note for that finding hangs off it.
+function highlightEvidence(description, findings) {
   const safe = esc(description);
-  const patterns = [...new Set(phrases)]
-    .filter(Boolean)
-    .sort((a, b) => b.length - a.length)   // longest first, so a phrase containing another wins
-    .map(q => esc(q).trim().split(/\s+/).map(escRegex).join("\\s+"))
-    .filter(Boolean);
-  if (!patterns.length) return safe;
+  const anchors = findings.map(() => null);
+  const owners = new Map();               // pattern -> {fi, pi}; the first finding to quote it wins
+  findings.forEach((f, fi) => (f.evidence_phrases || []).forEach((q, pi) => {
+    if (!q) return;
+    const pattern = esc(q).trim().split(/\s+/).map(escRegex).join("\\s+");
+    if (pattern && !owners.has(pattern)) owners.set(pattern, { fi, pi });
+  }));
+  const entries = [...owners.entries()].sort((a, b) => b[0].length - a[0].length); // longest first, so a phrase containing another wins
+  if (!entries.length) return { html: safe, anchors };
+
   // One pass over the escaped text: a replacement is never rescanned, so the <mark>
-  // tags this inserts can't be matched or nested by a later phrase.
-  return safe.replace(new RegExp("(" + patterns.join("|") + ")", "gi"), "<mark>$1</mark>");
+  // tags this inserts can't be matched or nested by a later phrase. Each phrase is
+  // its own capture group, which is how a match is traced back to its finding.
+  const re = new RegExp(entries.map(([p]) => "(" + p + ")").join("|"), "gi");
+  const hits = new Map();
+  const html = safe.replace(re, (m, ...rest) => {
+    const gi = rest.slice(0, entries.length).findIndex(g => g !== undefined);
+    if (gi < 0) return m;
+    const { fi, pi } = entries[gi][1];
+    const n = hits.get(gi) || 0;
+    hits.set(gi, n + 1);
+    const id = `ev-${fi}-${pi}` + (n ? `-${n}` : "");   // a phrase can occur more than once; ids stay unique
+    if (!anchors[fi]) anchors[fi] = id;
+    return `<mark id="${id}" data-finding="${fi}">${m}</mark>`;
+  });
+  return { html, anchors };
 }
 function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 

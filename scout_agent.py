@@ -1,10 +1,11 @@
 """Week 2: the Scout agent - judgment layer for whether a posting is worth Yasmine's time."""
+import os
 from crewai import Agent, Task, Crew, LLM
 from pydantic import BaseModel
 
 llm = LLM(
     model="ollama/llama3.1:8b",
-    base_url="http://localhost:11434",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
     temperature=0,
 )
 

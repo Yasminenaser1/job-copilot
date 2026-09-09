@@ -11,6 +11,7 @@ Safety properties this module is built to hold:
   - grounded: every theme is verified against real row IDs before it is returned,
     so the agent cannot cite a posting that does not exist
 """
+import os
 import re
 
 from crewai import Agent, Task, Crew, LLM
@@ -29,7 +30,7 @@ GENERIC_KEYWORDS = {"ai", "ml", "artificial intelligence", "machine learning",
 
 llm = LLM(
     model="ollama/llama3.1:8b",
-    base_url="http://localhost:11434",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
     temperature=0,   # insights want none
 )
 

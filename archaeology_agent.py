@@ -18,6 +18,7 @@ Safety properties this module is built to hold:
   - never certain: confidence is capped, because none of these hypotheses can
     be verified - the company never tells you why the posting existed
 """
+import os
 import re
 import sys
 from typing import Literal
@@ -53,7 +54,7 @@ HYPOTHESES = [
 
 llm = LLM(
     model="ollama/llama3.1:8b",
-    base_url="http://localhost:11434",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
     temperature=0,   # inference over evidence, not creativity
 )
 

@@ -1,4 +1,5 @@
 """Week 2: the Letter agent - pre-drafts cover letters for high-scoring scouted jobs."""
+import os
 from pathlib import Path
 import re
 from crewai import Agent, Task, Crew, LLM
@@ -6,7 +7,7 @@ from match import retrieve_profile
 
 llm = LLM(
     model="ollama/llama3.1:8b",
-    base_url="http://localhost:11434",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
     temperature=0.4,   # letters want a little life; scoring wants none
 )
 
