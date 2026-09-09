@@ -158,15 +158,33 @@ One `missing_keywords` row tells you nothing. Forty of them are a pattern. The I
 agent reads every scored posting and clusters the gaps into themes - "application
 security", say - each one carrying the postings that back it.
 
+**Python finds the candidates, the model names them.** Handing llama3.1:8b 181 raw
+keyword strings and asking it to spot the recurring ones does not work: it cannot count
+across a list that long, so it invents groupings and labels them confidently. So the
+counting happens in Python - normalizing each keyword, splitting the entries that pack
+several gaps into one string (`cloud technologies (AWS, Azure or GCP)` is three), and
+keeping the terms that appear in two or more *distinct* postings. The unit is the
+posting, not the string, which is what stops one row listing LangGraph twice from
+looking like a trend. The model receives that shortlist - 17 terms, not 181 - and does
+only the part it is good at: naming a group and saying why it matters.
+Run `python insights_agent.py --terms` to see the shortlist without calling the model.
+
 It is scoped to skill gaps on purpose. It says nothing about outcomes: with a handful
 of rows and no rejections logged there is no funnel to analyze, and a model asked about
 one anyway will invent it.
 
-Grounded the same way Ask is: every theme is checked against real row ids before it is
-returned, and a theme the rows don't support is dropped rather than softened. A single
-posting is not a pattern, so one-off gaps are dropped too.
+Grounded the same way Ask is, through two gates. A posting counts as evidence for a
+theme only if it contains **two** of that theme's terms, not one - sharing a single word
+with a theme is a vocabulary coincidence, and taking the union of every id each keyword
+touched is what once filed a Camunda JVM backend role under "AI and Machine Learning" on
+the strength of `observability` alone. And a theme whose terms never co-occur in any
+posting is rejected outright rather than relabelled: the model grouped things the data
+keeps apart, so its name cannot be trusted for either half. A single posting is not a
+pattern, so one-off gaps are dropped too.
 
-`python insights_evals.py` - 7 cases, 5 of them model-free guard tests. Current: 7/7.
+`python insights_evals.py` - 16 cases, 12 of them model-free. Seven run against real
+tracker rows copied verbatim, mess included, because the old clean 4-row synthetic
+fixture passed while the real table was broken. Current: 16/16.
 
 ## Top Picks: what to act on next
 
