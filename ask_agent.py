@@ -126,7 +126,7 @@ def _facts(apps: list[dict]) -> str:
     gaps = Counter()
     for a in apps:
         # set(): one posting naming a gap twice is still one posting
-        gaps.update({k.strip().lower() for k in (a["missing_keywords"] or "").split(",") if k.strip()})
+        gaps.update({k.lower() for k in a["missing_keywords"]})
 
     lines = [f"- postings logged: {len(apps)}"]
     lines.append("- by status: " + (", ".join(f"{s} {n}" for s, n in sorted(statuses.items())) or "none"))
@@ -145,8 +145,7 @@ def _facts(apps: list[dict]) -> str:
 def _corpus(apps: list[dict]) -> str:
     lines = []
     for a in apps[:MAX_ROWS]:
-        keywords = ", ".join(k.strip()[:MAX_KEYWORD_CHARS]
-                             for k in (a["missing_keywords"] or "").split(",") if k.strip())
+        keywords = ", ".join(k[:MAX_KEYWORD_CHARS] for k in a["missing_keywords"])
         lines.append(f"[id {a['id']}] {a['match_score']}% | {a['status']} | {a['analyzed_on']} | "
                      f"{a['role']} @ {a['company']} | missing: {keywords or 'none logged'}")
     return "\n".join(lines)

@@ -11,7 +11,7 @@ def keyword_rows() -> list[tuple[int, str, str, list[str]]]:
     """(id, company, role, missing keywords) for every posting that logged any."""
     rows = []
     for app in list_applications():
-        keywords = [k.strip() for k in (app["missing_keywords"] or "").split(",") if k.strip()]
+        keywords = app["missing_keywords"]   # already a list; tracker owns the format
         if keywords:
             rows.append((app["id"], app["company"], app["role"], keywords))
     return rows

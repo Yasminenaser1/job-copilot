@@ -178,6 +178,78 @@ def _():
         tracker.DB_PATH = old_path
         os.unlink(path)
 
+@case("keyword_containing_a_comma_survives_a_round_trip")
+def _():
+    """The v3 bug: keywords were stored with ", ".join() and read back with
+    split(","), so any keyword containing a comma came back shredded. A real row
+    in tracker.db turned "cloud technologies (AWS, Azure or GCP)" into
+    "cloud technologies (AWS" and "Azure or GCP)"."""
+    import tempfile, os
+    import tracker
+    from match import MatchReport
+    KEYWORDS = [
+        "cloud technologies (AWS, Azure or GCP)",   # the real one
+        "Kubernetes",
+        "statistics, probability",                  # a bare comma, no brackets
+        'a "quoted, thing"',                        # quotes must survive JSON too
+    ]
+    old_path = tracker.DB_PATH
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd); os.unlink(path)
+    tracker.DB_PATH = path
+    try:
+        report = MatchReport(match_score=80, matching_skills=["python"],
+                             missing_keywords=KEYWORDS,
+                             projects_to_emphasize=["job-copilot"], one_line_verdict="fine")
+        app_id = tracker.log_application("Acme", "AI Engineer", report)
+        row = [a for a in tracker.list_applications() if a["id"] == app_id][0]
+        assert row["missing_keywords"] == KEYWORDS, row["missing_keywords"]
+        # and every downstream reader gets the same list, not a re-split of it
+        import gaps, picks
+        assert gaps.keyword_rows()[0][3] == KEYWORDS
+        assert picks.top_picks()[0]["missing_keywords"] == KEYWORDS
+    finally:
+        tracker.DB_PATH = old_path
+        if os.path.exists(path):
+            os.unlink(path)
+
+@case("legacy_comma_joined_rows_still_read")
+def _():
+    """Rows written before the change stay readable with no migration, and the
+    bracketed case is recovered. A bare comma is genuinely unrecoverable - that
+    is asserted here so nobody later mistakes it for a regression."""
+    import sqlite3, tempfile, os
+    import tracker
+    old_path = tracker.DB_PATH
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    legacy = ("DevOps, MLOps, cloud technologies (AWS, Azure or GCP), Kubernetes, "
+              "Java, Scala, Apache Spark")
+    with sqlite3.connect(path) as conn:
+        conn.execute("""CREATE TABLE applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, company TEXT, role TEXT,
+            match_score INTEGER, missing_keywords TEXT,
+            status TEXT DEFAULT 'analyzed', analyzed_on TEXT)""")
+        conn.execute("INSERT INTO applications (company, role, match_score, missing_keywords)"
+                     " VALUES ('Old', 'Role', 70, ?)", (legacy,))
+    tracker.DB_PATH = path
+    try:
+        row = tracker.list_applications()[0]
+        assert row["missing_keywords"] == [
+            "DevOps", "MLOps", "cloud technologies (AWS, Azure or GCP)",
+            "Kubernetes", "Java", "Scala", "Apache Spark",
+        ], row["missing_keywords"]
+        # A comma outside any bracket was destroyed at write time; do not pretend.
+        assert tracker.decode_keywords("statistics, probability") == ["statistics", "probability"]
+        # An empty or absent value is absence, not a one-element list.
+        assert tracker.decode_keywords(None) == [] and tracker.decode_keywords("") == []
+        # The opt-in rewriter reports the row without touching it by default.
+        assert len(tracker.rewrite_legacy_keywords(dry_run=True)) == 1
+        assert tracker.list_applications()[0]["missing_keywords"][2].endswith("GCP)")
+    finally:
+        tracker.DB_PATH = old_path
+        os.unlink(path)
+
 def run_feed_evals() -> tuple[int, int]:
     passed = 0
     print("🔭 Feed/source eval cases (no model, no network)...")

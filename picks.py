@@ -60,7 +60,7 @@ def top_picks(limit: int = MAX_PICKS) -> list[dict]:
             "match_score": app["match_score"],
             "status": app["status"],
             "analyzed_on": app["analyzed_on"],
-            "missing_keywords": [k.strip() for k in (app["missing_keywords"] or "").split(",") if k.strip()],
+            "missing_keywords": app["missing_keywords"],
             # The link is the point of a pick: a match you then have to go and
             # find yourself has saved you nothing. Postings pasted in by hand
             # have no board behind them, so this stays None for those.

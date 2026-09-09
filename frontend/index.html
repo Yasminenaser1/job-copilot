@@ -622,7 +622,7 @@ async function loadPipeline() {
             ? `<a class="row-link" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.role)}</a>`
             : esc(a.role)}</td>
           <td><span class="score-pill ${a.match_score >= 70 ? "s-high" : a.match_score >= 45 ? "s-mid" : "s-low"}">${a.match_score}</span></td>
-          <td class="hint">${esc(a.missing_keywords || "")}</td>
+          <td class="hint">${esc((a.missing_keywords || []).join(", "))}</td>
           <td><select data-id="${a.id}">${statuses.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td>
           <td class="hint">${esc(a.analyzed_on || "")}</td>
           <td>${a.status === "analyzed" ? `<button class="mini-btn" data-apply="${a.id}">Mark applied</button>` : ""}</td>
