@@ -1,7 +1,8 @@
 venv/
-db/
-tracker.db
-profile/
-jobs/
 __pycache__/
+*.pyc
 .git/
+.DS_Store
+screenshots/
+drafts/
+*.md

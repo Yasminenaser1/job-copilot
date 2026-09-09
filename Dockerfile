@@ -13,6 +13,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py ./
 COPY evals/ evals/
 
+# Data the app needs at runtime: resume/profile, the Chroma index,
+# saved postings, and the web frontend
+COPY profile/ profile/
+COPY db/ db/
+COPY jobs/ jobs/
+COPY sources/ sources/
+COPY frontend/ frontend/
+
+# Reach Ollama on the host Mac, not inside the container
+ENV OLLAMA_HOST=http://host.docker.internal:11434
+
 # The API listens on 8000 inside the container
 EXPOSE 8000
 
