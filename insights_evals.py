@@ -14,8 +14,8 @@ keeps the mess: row #15 lists LangGraph twice, row #13 lists "LangChain",
 separate entries, row #12 hides three clouds inside one parenthesis, and #25 is the
 Camunda backend role that the old union-of-ids rule kept filing under AI.
 """
-from insights_agent import (find_gap_themes, _ground, recurring_terms, SkillTheme,
-                            NON_DISCRIMINATIVE_TERMS)
+from insights_agent import (find_gap_themes, _ground, recurring_terms, ungrouped_terms,
+                            SkillTheme, NON_DISCRIMINATIVE_TERMS)
 
 # (id, company, role, [missing keywords])
 SECURITY_PIPELINE = [
@@ -189,7 +189,35 @@ def run_real_cases() -> tuple[int, int]:
     passed += _check("keeps_camunda_in_the_ops_theme", ok,
                      f"got {ops.evidence_ids if ops else 'theme dropped'}")
 
-    return passed, 7
+    # A term the model leaves out must still reach the user. kubernetes is in #12
+    # and #15, so it cleared every gate; being unnamed is not the same as being a
+    # one-off, and until ungrouped_terms() there was no output path that could
+    # tell those two apart. The omission is hand-built rather than provoked out of
+    # the model, so this case cannot flake.
+    cloud = [SkillTheme(theme="Cloud platforms", keywords=["AWS", "GCP", "Azure"],
+                        why_it_matters="hand-built, deliberately omits kubernetes")]
+    left = ungrouped_terms(cloud, REAL_PIPELINE)
+    passed += _check("omitted_term_still_reported", left.get("kubernetes") == {12, 15},
+                     f"kubernetes={left.get('kubernetes')}, expected {{12, 15}}")
+
+    # The join runs through _norm, so the model's casing must not strand a term it
+    # did group - "AWS" in a theme has to cancel "aws" on the shortlist.
+    ok = not ({"aws", "gcp", "azure"} & set(left))
+    passed += _check("grouped_terms_are_not_relisted", ok,
+                     f"relisted {sorted({'aws', 'gcp', 'azure'} & set(left))}")
+
+    # Zero themes is not evidence of zero patterns. This is the state the old
+    # "the gaps so far are one-offs" line described, wrongly, as no pattern.
+    ok = ungrouped_terms([], REAL_PIPELINE) == recurring_terms(REAL_PIPELINE)
+    passed += _check("no_themes_still_reports_whole_shortlist", ok,
+                     f"got {sorted(ungrouped_terms([], REAL_PIPELINE))}")
+
+    # Nothing recurs -> nothing to also-report, and the one-offs line is honest.
+    ok = ungrouped_terms([], SCATTERED_PIPELINE) == {}
+    passed += _check("empty_shortlist_reports_nothing", ok,
+                     f"got {sorted(ungrouped_terms([], SCATTERED_PIPELINE))}")
+
+    return passed, 11
 
 def run_model_cases() -> tuple[int, int]:
     passed = 0

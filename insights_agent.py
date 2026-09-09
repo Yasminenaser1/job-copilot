@@ -21,6 +21,9 @@ Safety properties this module is built to hold:
   - grounded: terms, groupings and evidence ids are all re-derived from the data
     after the model answers, so the agent cannot cite a posting that does not
     exist and cannot file a posting under a theme it does not support
+  - lossless: a term the model declines to name is still reported, flat, by
+    ungrouped_terms(). Grouping is the model's call; whether a verified recurring
+    gap reaches the user is not.
 """
 import os
 import re
@@ -177,10 +180,15 @@ def recurring_terms(rows) -> dict[str, set[int]]:
     return {term: ids for term, ids in sorted(_term_index(rows).items())
             if len(ids) >= MIN_POSTINGS_PER_THEME and term not in NON_DISCRIMINATIVE_TERMS}
 
+def _by_frequency(item: tuple[str, set[int]]) -> tuple[int, str]:
+    """Commonest first, ties alphabetical - the order every term listing uses."""
+    term, ids = item
+    return -len(ids), term
+
 def _term_corpus(terms: dict[str, set[int]]) -> str:
     """Render the shortlist for the prompt, commonest first, ties alphabetical."""
     lines = []
-    for term, ids in sorted(terms.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    for term, ids in sorted(terms.items(), key=_by_frequency):
         cited = ", ".join(f"#{i}" for i in sorted(ids))
         lines.append(f"- {term[:MAX_KEYWORD_CHARS]}  ({len(ids)} postings: {cited})")
     return "\n".join(lines)
@@ -284,6 +292,28 @@ def _ground(themes: list[SkillTheme], rows) -> list[SkillTheme]:
         kept.append(theme)
     return kept[:MAX_THEMES]
 
+def ungrouped_terms(themes: list[SkillTheme], rows=None) -> dict[str, set[int]]:
+    """Shortlist terms that recur but reached no theme, commonest first.
+
+    A term can leave the shortlist without reaching the output four ways: the
+    model never names it (the prompt deliberately allows that), _ground rejects
+    the whole theme it sat in, _settle prunes it out of a theme that survives, or
+    it lands in the sixth theme where MAX_THEMES truncates. All four end
+    identically - a term proven to be in >=MIN_POSTINGS_PER_THEME postings, with
+    nothing said about it - so rather than instrument four branches this asks the
+    one question that covers them: what did recurring_terms() find that the
+    reported themes do not mention?
+
+    The join is exact, not fuzzy. _resolve() keys each surviving keyword on the
+    computed term, so _norm() over the model's spelling recovers the shortlist
+    term it came from.
+    """
+    rows = keyword_rows() if rows is None else rows
+    grouped = {_norm(keyword) for theme in themes for keyword in theme.keywords}
+    return {term: ids
+            for term, ids in sorted(recurring_terms(rows).items(), key=_by_frequency)
+            if term not in grouped}
+
 # --- the one model call -----------------------------------------------------
 
 def find_gap_themes(rows=None) -> list[SkillTheme]:
@@ -331,8 +361,12 @@ def find_gap_themes(rows=None) -> list[SkillTheme]:
 
 def print_themes(themes: list[SkillTheme], rows=None):
     rows = keyword_rows() if rows is None else rows
+    ungrouped = ungrouped_terms(themes, rows)
     print(f"\n🔍 Skill gaps across {len(rows)} scored posting(s)")
-    if not themes:
+    if not themes and not ungrouped:
+        # Only true when the shortlist is genuinely empty. Every term on it is in
+        # >=MIN_POSTINGS_PER_THEME postings by construction, so calling the gaps
+        # one-offs while anything recurs is a false claim about the data.
         print("   No repeating pattern yet — the gaps so far are one-offs.")
         return
     for theme in themes:
@@ -341,6 +375,15 @@ def print_themes(themes: list[SkillTheme], rows=None):
         if theme.keywords:
             print(f"   keywords: {', '.join(theme.keywords)}")
         print(f"   {theme.why_it_matters}")
+    if ungrouped:
+        # Named by nobody, but counted by Python. Reported flat - no label, no
+        # sentence, no evidence threshold - because those need a theme, and the
+        # point of this line is that these terms did not get one.
+        listed = []
+        for term, ids in ungrouped.items():
+            cited = ", ".join(f"#{i}" for i in sorted(ids))
+            listed.append(f"{term} ({cited})")
+        print(f"\n📎 also recurring, not grouped: {', '.join(listed)}")
 
 def print_terms(rows=None):
     """What the model will be handed. Run this when a theme looks wrong."""

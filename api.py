@@ -5,7 +5,7 @@ from match import analyze, MatchReport, validate_posting
 from cover_letter import write_cover_letter
 from tracker import log_application, update_status, list_applications
 from gaps import keyword_rows
-from insights_agent import find_gap_themes
+from insights_agent import find_gap_themes, ungrouped_terms
 from ask_agent import ask, MAX_QUESTION_CHARS
 from picks import top_picks, MIN_PICK_SCORE, MAX_PICKS
 from archaeology_agent import read_posting
@@ -71,6 +71,10 @@ def insights():
     return {
         "postings_analyzed": len(rows),
         "themes": [t.model_dump() for t in themes],
+        # Terms that recur but landed in no theme. Additive: a client that only
+        # reads "themes" is unaffected, but the gap is no longer invisible.
+        "ungrouped": [{"term": term, "evidence_ids": sorted(ids)}
+                      for term, ids in ungrouped_terms(themes, rows).items()],
     }
 
 @app.post("/archaeology")

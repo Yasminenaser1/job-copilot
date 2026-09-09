@@ -182,9 +182,26 @@ posting is rejected outright rather than relabelled: the model grouped things th
 keeps apart, so its name cannot be trusted for either half. A single posting is not a
 pattern, so one-off gaps are dropped too.
 
-`python insights_evals.py` - 16 cases, 12 of them model-free. Seven run against real
+**Grouping is the model's call; being reported is not.** The gates above are strict, and
+the prompt tells the model to leave a term out rather than stretch a label over it - so
+a term can clear every gate and still be named by nothing. `kubernetes` did exactly that:
+verified in #12 and #15, grouped into no theme, and therefore invisible. Anything on the
+shortlist that reaches no theme is now listed flat underneath, with its postings and
+nothing else - no label, no sentence, since those are what needed a theme in the first
+place:
+
+```
+📎 also recurring, not grouped: claude (#15, #24), kubernetes (#12, #15)
+```
+
+The list is uncapped on purpose - the shortlist is already thresholded, and truncating it
+would reintroduce the silent loss the line exists to fix. It also means "no repeating
+pattern yet" is now printed only when the shortlist really is empty, rather than whenever
+the model happened to name nothing.
+
+`python insights_evals.py` - 20 cases, 16 of them model-free. Eleven run against real
 tracker rows copied verbatim, mess included, because the old clean 4-row synthetic
-fixture passed while the real table was broken. Current: 16/16.
+fixture passed while the real table was broken. Current: 20/20.
 
 ## Top Picks: what to act on next
 
