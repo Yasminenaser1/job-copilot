@@ -287,3 +287,38 @@ dedupe, and the tracker migration. Current: 14/14.
   Director UX/UI and AI" posting the Scout itself rejects as a writing job. Top
   Picks shows three, and stale rows are sitting in them. Parked in v3-ideas -
   a wider funnel needs a triage rule, not a bigger list.
+
+## Running with Docker
+
+The API is containerized, but the container does **not** include the model.
+Job Copilot runs inference against Ollama on the host machine, so Ollama must
+be running before you start the container.
+
+```bash
+# 1. Make sure Ollama is up on the host
+ollama list
+
+# 2. Build
+docker build -t job-copilot .
+
+# 3. Run
+docker run --rm -p 8000:8000 job-copilot
+```
+
+The container reaches the host's Ollama at `host.docker.internal:11434`. This is
+set via the `OLLAMA_HOST` environment variable, which defaults to
+`http://localhost:11434` when running outside Docker, so the same code works
+both ways. To point at a different host:
+
+```bash
+docker run --rm -p 8000:8000 -e OLLAMA_HOST=http://my-ollama:11434 job-copilot
+```
+
+Verify it's working:
+
+```bash
+curl -s localhost:8000/health
+```
+
+Note: `host.docker.internal` resolves on Docker Desktop for Mac and Windows. On
+Linux, run with `--add-host=host.docker.internal:host-gateway`.
